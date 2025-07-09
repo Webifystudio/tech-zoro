@@ -1,29 +1,82 @@
 "use client";
 
 import type { ChangeEvent, FormEvent } from 'react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { uploadImage } from '@/lib/imgbb';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 
+import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Upload } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AppSettingsPage({ params }: { params: { appId: string } }) {
   const { toast } = useToast();
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // In a real app, you'd fetch this data based on appId
-  const [appName, setAppName] = useState('My Awesome App');
-  const [appDescription, setAppDescription] = useState('This is a great description for an even greater app.');
+  const [appName, setAppName] = useState('');
+  const [appDescription, setAppDescription] = useState('');
   const [loginBannerFile, setLoginBannerFile] = useState<File | null>(null);
+  const [loginBannerUrl, setLoginBannerUrl] = useState<string | null>(null);
   const [loginBannerPreview, setLoginBannerPreview] = useState<string | null>(null);
 
   const loginBannerInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (!currentUser) {
+        router.push('/login');
+      } else {
+        setUser(currentUser);
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
+
+  useEffect(() => {
+    if (!user || !db || !params.appId) return;
+
+    const fetchAppData = async () => {
+      setIsLoading(true);
+      const appDocRef = doc(db, 'apps', params.appId);
+      try {
+        const appDocSnap = await getDoc(appDocRef);
+        if (appDocSnap.exists()) {
+          const appData = appDocSnap.data();
+          if (appData.ownerId !== user.uid) {
+            toast({ variant: 'destructive', title: 'Unauthorized', description: "You don't have permission to view these settings." });
+            router.push('/');
+            return;
+          }
+          setAppName(appData.name || '');
+          setAppDescription(appData.description || '');
+          setLoginBannerUrl(appData.loginBannerUrl || null);
+          setLoginBannerPreview(appData.loginBannerUrl || null);
+        } else {
+          toast({ variant: 'destructive', title: 'App not found', description: 'The requested app does not exist.' });
+          router.push('/');
+        }
+      } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch app data.' });
+        router.push('/');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAppData();
+  }, [user, params.appId, router, toast]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -35,26 +88,32 @@ export default function AppSettingsPage({ params }: { params: { appId: string } 
 
   const handleSaveChanges = async (e: FormEvent) => {
     e.preventDefault();
+    if (!db) return;
     setIsSaving(true);
 
     try {
-      let loginBannerUrl = loginBannerPreview;
+      let finalLoginBannerUrl = loginBannerUrl;
 
       if (loginBannerFile) {
         const formData = new FormData();
         formData.append('image', loginBannerFile);
         const result = await uploadImage(formData);
         if (result.url) {
-          loginBannerUrl = result.url;
-          // You would save this URL to your database
-          setLoginBannerPreview(loginBannerUrl);
+          finalLoginBannerUrl = result.url;
         } else {
           throw new Error(result.error || 'Banner upload failed');
         }
       }
       
-      // Here you would save appName, appDescription, and loginBannerUrl to your database
-      console.log('Saving data:', { appName, appDescription, loginBannerUrl });
+      const appDocRef = doc(db, 'apps', params.appId);
+      await updateDoc(appDocRef, {
+        name: appName,
+        description: appDescription,
+        loginBannerUrl: finalLoginBannerUrl,
+      });
+      
+      setLoginBannerUrl(finalLoginBannerUrl);
+      setLoginBannerFile(null);
 
       toast({
         title: 'Settings Saved',
@@ -70,6 +129,40 @@ export default function AppSettingsPage({ params }: { params: { appId: string } 
       setIsSaving(false);
     }
   };
+
+  if (isLoading || !user) {
+    return (
+      <div className="space-y-8">
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-1/3" />
+          <Skeleton className="h-5 w-1/2" />
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-8 w-1/4" />
+            <Skeleton className="h-4 w-2/5" />
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-48 w-full" />
+            </div>
+          </CardContent>
+          <CardFooter className="border-t px-6 py-4">
+            <Skeleton className="h-10 w-32" />
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

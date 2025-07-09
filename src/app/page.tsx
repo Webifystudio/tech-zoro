@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import Image from 'next/image';
 import Link from 'next/link';
+import { collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy } from 'firebase/firestore';
 
-import { auth, isFirebaseConfigured } from '@/lib/firebase';
+import { auth, isFirebaseConfigured, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Loader2, Plus, Search, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -39,9 +40,10 @@ export default function Home() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   
-  const [apps, setApps] = useState<{ id: number; name: string }[]>([]);
+  const [apps, setApps] = useState<{ id: string; name: string }[]>([]);
   const [newAppName, setNewAppName] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCreatingApp, setIsCreatingApp] = useState(false);
 
   useEffect(() => {
     if (!isFirebaseConfigured || !auth) {
@@ -61,6 +63,20 @@ export default function Home() {
     return () => unsubscribe();
   }, [router]);
 
+  useEffect(() => {
+    if (user && db) {
+      const q = query(collection(db, "apps"), where("ownerId", "==", user.uid), orderBy("createdAt", "desc"));
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const userApps = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as { id: string; name: string }));
+        setApps(userApps);
+      }, (error) => {
+        console.error("Error fetching apps:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not fetch your apps." });
+      });
+      return () => unsubscribe();
+    }
+  }, [user, toast]);
+
   const handleLogout = async () => {
     if (!auth) return;
     try {
@@ -79,16 +95,32 @@ export default function Home() {
     }
   };
 
-  const handleCreateApp = (e: React.FormEvent) => {
+  const handleCreateApp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newAppName.trim()) {
-      setApps([...apps, { id: Date.now(), name: newAppName.trim() }]);
+    if (!newAppName.trim() || !user || !db) return;
+    
+    setIsCreatingApp(true);
+    try {
+      await addDoc(collection(db, "apps"), {
+        name: newAppName.trim(),
+        ownerId: user.uid,
+        createdAt: serverTimestamp(),
+      });
+      
       setNewAppName('');
       setIsDialogOpen(false);
       toast({
         title: "App Created",
         description: `Your new app "${newAppName.trim()}" has been created.`,
       })
+    } catch (error: any) {
+       toast({
+        variant: "destructive",
+        title: "Failed to create app",
+        description: error.message || "An unexpected error occurred.",
+      });
+    } finally {
+      setIsCreatingApp(false);
     }
   };
 
@@ -187,7 +219,10 @@ export default function Home() {
                           <DialogClose asChild>
                             <Button type="button" variant="outline">Cancel</Button>
                           </DialogClose>
-                          <Button type="submit">Create App</Button>
+                          <Button type="submit" disabled={isCreatingApp}>
+                            {isCreatingApp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Create App
+                          </Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>

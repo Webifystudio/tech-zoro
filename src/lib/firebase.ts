@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth, GoogleAuthProvider } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBPDoh0znVAGCKNav2qX9gqh4eVGSoDLi0",
@@ -15,6 +16,7 @@ const firebaseConfig = {
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let googleProvider: GoogleAuthProvider | null = null;
+let db: Firestore | null = null;
 let isFirebaseConfigured = false;
 
 // We only want to initialize firebase on the client
@@ -22,6 +24,7 @@ if (typeof window !== 'undefined' && firebaseConfig.apiKey) {
     try {
         app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
         auth = getAuth(app);
+        db = getFirestore(app);
         googleProvider = new GoogleAuthProvider();
         isFirebaseConfigured = true;
     } catch (e) {
@@ -31,7 +34,8 @@ if (typeof window !== 'undefined' && firebaseConfig.apiKey) {
         app = null;
         auth = null;
         googleProvider = null;
+        db = null;
     }
 }
 
-export { app, auth, googleProvider, isFirebaseConfigured };
+export { app, auth, db, googleProvider, isFirebaseConfigured };

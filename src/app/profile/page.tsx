@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, updateProfile, type User } from 'firebase/auth';
 import Image from 'next/image';
 import Link from 'next/link';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 
-import { auth, isFirebaseConfigured } from '@/lib/firebase';
+import { auth, isFirebaseConfigured, db } from '@/lib/firebase';
 import { uploadImage } from '@/lib/imgbb';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -33,8 +34,7 @@ export default function ProfilePage() {
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   
-  // Placeholder for user's apps
-  const [apps] = useState<{ id: number; name: string }[]>([]);
+  const [apps, setApps] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     if (!isFirebaseConfigured || !auth) {
@@ -48,8 +48,7 @@ export default function ProfilePage() {
         setUser(currentUser);
         setDisplayName(currentUser.displayName || '');
         setAvatarPreview(currentUser.photoURL);
-        // Banner URL would typically be stored in your database (e.g., Firestore)
-        // For this example, we'll use a placeholder.
+        // In a real app, you would fetch banner from user profile in firestore
         setBannerPreview('https://placehold.co/1200x300.png');
       }
       setLoading(false);
@@ -57,6 +56,17 @@ export default function ProfilePage() {
 
     return () => unsubscribe();
   }, [router]);
+
+  useEffect(() => {
+    if (user && db) {
+      const q = query(collection(db, "apps"), where("ownerId", "==", user.uid), orderBy("createdAt", "desc"));
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const userApps = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as { id: string; name: string }));
+        setApps(userApps);
+      });
+      return () => unsubscribe();
+    }
+  }, [user]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
     if (e.target.files && e.target.files[0]) {
