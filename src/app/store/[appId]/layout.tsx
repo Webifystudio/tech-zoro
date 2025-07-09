@@ -1,31 +1,43 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
+import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, ShoppingCart, User, X } from 'lucide-react';
+import { Search, ShoppingCart, User, X, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Footer } from '@/components/Footer';
 import { cn } from '@/lib/utils';
+import { CartProvider, useCart } from '@/context/CartProvider';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter, SheetClose } from '@/components/ui/sheet';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface AppData {
   name: string;
   customization?: {
     logoUrl?: string;
   };
+  marketing?: {
+    isBannerActive?: boolean;
+    bannerText?: string;
+  };
 }
 
-export default function StoreLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl: string;
+}
+
+const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -36,6 +48,10 @@ export default function StoreLayout({
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const { cartItems, removeFromCart, clearCart } = useCart();
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const cartTotal = cartItems.reduce((total, item) => total + item.price, 0);
 
   useEffect(() => {
     if (!appId || !db) return;
@@ -48,15 +64,6 @@ export default function StoreLayout({
     return () => unsub();
   }, [appId]);
 
-  const handleToggleSearch = () => {
-    setIsSearchExpanded(prev => {
-        if (!prev) {
-            setTimeout(() => searchInputRef.current?.focus(), 100);
-        }
-        return !prev;
-    });
-  };
-
   const handleSearchSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       const encodedSearchTerm = encodeURIComponent(searchTerm.trim());
@@ -65,10 +72,16 @@ export default function StoreLayout({
       } else {
           router.push(`/store/${appId}`);
       }
+      setIsSearchExpanded(false);
   };
 
   return (
     <div className="bg-muted/40 min-h-screen flex flex-col">
+      {appData?.marketing?.isBannerActive && appData.marketing.bannerText && (
+        <div className="bg-primary text-primary-foreground text-center py-2 px-4 text-sm font-semibold animate-slide-in-from-bottom">
+          {appData.marketing.bannerText}
+        </div>
+      )}
       <header className="bg-background/80 backdrop-blur-sm shadow-sm sticky top-0 z-40 border-b">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20 md:h-24 gap-4 md:gap-8">
@@ -99,7 +112,7 @@ export default function StoreLayout({
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onFocus={() => setIsSearchExpanded(true)}
                 />
-                <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full" type="submit">
+                 <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full" type="button" onClick={() => searchInputRef.current?.focus()}>
                     <Search className="h-5 w-5 text-muted-foreground" />
                     <span className="sr-only">Search</span>
                 </Button>
@@ -111,14 +124,61 @@ export default function StoreLayout({
                 <User className="h-6 w-6" />
                 <span className="sr-only">Account</span>
               </Button>
-              <Button size="icon" variant="ghost" className="rounded-full relative">
-                <ShoppingCart className="h-6 w-6" />
-                <span className="sr-only">Cart</span>
-                <span className="absolute top-1 right-1 flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                </span>
-              </Button>
+              <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
+                <SheetTrigger asChild>
+                    <Button size="icon" variant="ghost" className="rounded-full relative">
+                        <ShoppingCart className="h-6 w-6" />
+                        <span className="sr-only">Cart</span>
+                        {cartItems.length > 0 && (
+                            <span className="absolute top-1 right-1 flex h-3 w-3 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground animate-ping once">
+                                {cartItems.length}
+                            </span>
+                        )}
+                    </Button>
+                </SheetTrigger>
+                <SheetContent className="flex flex-col">
+                    <SheetHeader>
+                        <SheetTitle>Your Cart ({cartItems.length})</SheetTitle>
+                    </SheetHeader>
+                    {cartItems.length > 0 ? (
+                        <>
+                        <ScrollArea className="flex-grow my-4 -mx-6">
+                            <div className="px-6">
+                                {cartItems.map(item => (
+                                    <div key={item.id} className="flex items-center gap-4 py-4 border-b">
+                                        <Image src={item.imageUrl} alt={item.name} width={64} height={64} className="rounded-md object-cover" />
+                                        <div className="flex-grow">
+                                            <p className="font-semibold">{item.name}</p>
+                                            <p className="text-muted-foreground">${item.price.toFixed(2)}</p>
+                                        </div>
+                                        <Button variant="ghost" size="icon" onClick={() => removeFromCart(item.id)}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                        <SheetFooter className="mt-auto">
+                            <div className="w-full space-y-4">
+                                <Separator />
+                                <div className="flex justify-between font-bold text-lg">
+                                    <span>Subtotal</span>
+                                    <span>${cartTotal.toFixed(2)}</span>
+                                </div>
+                                <Button size="lg" className="w-full">Proceed to Checkout</Button>
+                                <Button variant="outline" className="w-full" onClick={clearCart}>Clear Cart</Button>
+                            </div>
+                        </SheetFooter>
+                        </>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-full text-center">
+                            <ShoppingCart className="h-16 w-16 text-muted-foreground" />
+                            <h3 className="mt-4 text-lg font-semibold">Your cart is empty</h3>
+                            <p className="text-muted-foreground mt-1">Add some products to get started!</p>
+                        </div>
+                    )}
+                </SheetContent>
+               </Sheet>
             </div>
              {isSearchExpanded && (
                 <Button size="icon" variant="ghost" className="rounded-full" onClick={() => setIsSearchExpanded(false)}>
@@ -137,4 +197,16 @@ export default function StoreLayout({
       <Footer />
     </div>
   );
+}
+
+export default function StoreLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <CartProvider>
+      <StoreLayoutContent>{children}</StoreLayoutContent>
+    </CartProvider>
+  )
 }

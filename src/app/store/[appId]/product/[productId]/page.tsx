@@ -4,7 +4,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import { doc, getDoc, collection, addDoc, query, onSnapshot, serverTimestamp, orderBy, Timestamp, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, query, onSnapshot, serverTimestamp, orderBy, Timestamp, where, getDocs, updateDoc, increment } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 
@@ -19,7 +19,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Star, Heart, ShoppingCart, Loader2, Trash2, Zap } from 'lucide-react';
 import { format, isPast } from 'date-fns';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useCart } from '@/context/CartProvider';
 
 interface Product {
   id: string;
@@ -79,7 +80,9 @@ export default function ProductDetailPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isWishlisted, setIsWishlisted] = useState(false);
-  const [isInCart, setIsInCart] = useState(false);
+  
+  const { cartItems, addToCart, removeFromCart } = useCart();
+  const isInCart = cartItems.some(item => item.id === product?.id);
 
   const [newReviewRating, setNewReviewRating] = useState(0);
   const [newReviewComment, setNewReviewComment] = useState('');
@@ -101,6 +104,8 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (product) {
       setFinalPrice(product.price);
+      // Reset coupon on product change
+      removeCoupon();
     }
   }, [product]);
 
@@ -156,7 +161,6 @@ export default function ProductDetailPage() {
 
         if (querySnapshot.empty) {
             setCouponError('Invalid coupon code.');
-            toast({ variant: 'destructive', title: 'Invalid Coupon' });
             return;
         }
 
@@ -165,13 +169,11 @@ export default function ProductDetailPage() {
 
         if (couponData.expiresAt && isPast(couponData.expiresAt.toDate())) {
             setCouponError('This coupon has expired.');
-            toast({ variant: 'destructive', title: 'Coupon Expired' });
             return;
         }
 
         if (couponData.usageLimit && (couponData.uses || 0) >= couponData.usageLimit) {
             setCouponError('This coupon has reached its usage limit.');
-            toast({ variant: 'destructive', title: 'Coupon Limit Reached' });
             return;
         }
 
@@ -188,7 +190,6 @@ export default function ProductDetailPage() {
 
     } catch (error) {
         setCouponError('Could not apply coupon.');
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not apply coupon.' });
     } finally {
         setIsApplyingCoupon(false);
     }
@@ -199,7 +200,6 @@ export default function ProductDetailPage() {
     setCouponCode('');
     setCouponError(null);
     if(product) setFinalPrice(product.price);
-    toast({ title: 'Coupon removed.' });
   }
 
   const averageRating = reviews.length > 0 ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length : 0;
@@ -234,8 +234,20 @@ export default function ProductDetailPage() {
     }
   };
 
-  const handleRedirect = () => {
-    if (!product) return;
+  const handleBuyNow = async () => {
+    if (!product || !db) return;
+
+    if (appliedCoupon) {
+      const couponRef = doc(db, 'apps', appId, 'coupons', appliedCoupon.id);
+      try {
+        await updateDoc(couponRef, {
+          uses: increment(1)
+        });
+      } catch (error) {
+        console.error("Failed to update coupon usage:", error);
+      }
+    }
+
     let url = '';
     if (product.platform === 'whatsapp' && appIntegrations?.whatsappNumber) {
         const message = encodeURIComponent(`I want to buy this ${product.name} (Product ID: ${product.id})`);
@@ -275,10 +287,8 @@ export default function ProductDetailPage() {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
-              </DialogClose>
-              <Button type="button" onClick={handleRedirect}>Confirm & Redirect</Button>
+               <Button type="button" variant="outline" onClick={() => setIsRedirectDialogOpen(false)}>Cancel</Button>
+               <Button type="button" onClick={handleBuyNow}>Confirm & Redirect</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -310,7 +320,7 @@ export default function ProductDetailPage() {
                             <p className="text-xl font-medium text-muted-foreground line-through">${product.price.toFixed(2)}</p>
                         </div>
                     ) : (
-                        <p className="text-3xl font-bold text-primary">${product.price.toFixed(2)}</p>
+                        <p className="text-3xl font-bold text-primary">${finalPrice?.toFixed(2) || product.price.toFixed(2)}</p>
                     )}
                 </div>
                 <p className="text-muted-foreground leading-relaxed">{product.description}</p>
@@ -322,7 +332,7 @@ export default function ProductDetailPage() {
                             <p className="text-sm font-medium text-green-700 dark:text-green-300">
                                 Coupon <span className="font-bold">{appliedCoupon.code}</span> applied!
                             </p>
-                            <Button variant="ghost" size="sm" onClick={removeCoupon}>Remove</Button>
+                            <Button variant="ghost" size="sm" onClick={() => {removeCoupon(); toast({ title: 'Coupon removed.' })}}>Remove</Button>
                         </div>
                     ) : (
                         <div className="flex gap-2">
@@ -331,10 +341,10 @@ export default function ProductDetailPage() {
                                 placeholder="Enter coupon code" 
                                 className="flex-1"
                                 value={couponCode}
-                                onChange={(e) => setCouponCode(e.target.value)}
+                                onChange={(e) => { setCouponCode(e.target.value); setCouponError(null); }}
                                 disabled={isApplyingCoupon}
                             />
-                            <Button onClick={handleApplyCoupon} disabled={isApplyingCoupon}>
+                            <Button onClick={handleApplyCoupon} disabled={isApplyingCoupon || !couponCode}>
                                 {isApplyingCoupon && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                                 Apply
                             </Button>
@@ -346,23 +356,11 @@ export default function ProductDetailPage() {
                 <div className="flex items-center gap-4 mt-2">
                     <div className="flex-1 flex flex-col sm:flex-row gap-4">
                         {isInCart ? (
-                            <Button size="lg" variant="outline" className="w-full" onClick={() => {
-                                setIsInCart(false);
-                                toast({
-                                    title: "Removed from Cart",
-                                    description: `${product.name} has been removed from your cart.`
-                                });
-                            }}>
+                            <Button size="lg" variant="outline" className="w-full" onClick={() => removeFromCart(product.id)}>
                                 <Trash2 className="mr-2 h-5 w-5" /> Remove from Cart
                             </Button>
                         ) : (
-                            <Button size="lg" className="w-full" onClick={() => {
-                                setIsInCart(true);
-                                toast({
-                                    title: "Added to Cart",
-                                    description: `${product.name} has been added to your cart.`
-                                });
-                            }}>
+                            <Button size="lg" className="w-full" onClick={() => addToCart(product)}>
                                 <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
                             </Button>
                         )}
