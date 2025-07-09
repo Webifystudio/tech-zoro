@@ -1,22 +1,15 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 
-// IMPORTANT: Create a .env.local file in the root of your project and add your Firebase credentials.
-// For example:
-// NEXT_PUBLIC_FIREBASE_API_KEY="your-api-key"
-// NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="your-auth-domain"
-// NEXT_PUBLIC_FIREBASE_PROJECT_ID="your-project-id"
-// NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="your-storage-bucket"
-// NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="your-messaging-sender-id"
-// NEXT_PUBLIC_FIREBASE_APP_ID="your-app-id"
-
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyBPDoh0znVAGCKNav2qX9gqh4eVGSoDLi0",
+  authDomain: "tech-zoro.firebaseapp.com",
+  databaseURL: "https://tech-zoro-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "tech-zoro",
+  storageBucket: "tech-zoro.appspot.com",
+  messagingSenderId: "588736971823",
+  appId: "1:588736971823:web:571ca28714cba8136032da",
+  measurementId: "G-8L19QD2GKM"
 };
 
 const isFirebaseConfigured = !!firebaseConfig.apiKey;
