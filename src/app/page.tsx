@@ -110,27 +110,51 @@ export default function Home() {
 
   if (user) {
     return (
-      <div className="flex flex-col h-screen bg-muted/30">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b bg-background px-6">
+      <div className="flex min-h-screen w-full flex-col bg-muted/20">
+        <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 sm:px-6">
           <h1 className="text-2xl font-bold tracking-tight text-primary" style={{fontFamily: "'Brush Script MT', 'Cursive'"}}>ZORO</h1>
-          
-          <div className="flex-1 flex justify-center px-8">
-            <div className="relative w-full max-w-lg">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Search all..."
-                className="pl-10 w-full bg-muted/50 border-0 focus-visible:ring-primary focus-visible:ring-2"
-              />
-            </div>
-          </div>
-
           <div className="flex items-center gap-4">
-             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <ThemeToggle />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Avatar className="cursor-pointer h-9 w-9">
+                  <AvatarImage src={user.photoURL || ''} alt={user.displayName || "User"} />
+                  <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 mt-2">
+                <DropdownMenuLabel>
+                  <p className="font-medium truncate">{user.displayName || "No name"}</p>
+                  <p className="text-xs text-muted-foreground font-normal truncate">{user.email}</p>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive">
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+
+        <main className="flex flex-1 flex-col items-center p-4 py-12 sm:p-6 md:p-8">
+          <div className="w-full max-w-3xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+              Make your business websites by creating an app
+            </h2>
+            <div className="mt-8 flex w-full items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                  placeholder="Search all..."
+                  className="w-full rounded-full bg-background pl-11 pr-4 py-2 text-base h-12 shadow-sm focus-visible:ring-primary focus-visible:ring-2"
+                />
+              </div>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
-                    <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        New App
-                    </Button>
+                  <Button size="icon" className="rounded-full h-12 w-12 flex-shrink-0 shadow-sm">
+                    <Plus className="h-6 w-6" />
+                    <span className="sr-only">New App</span>
+                  </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
@@ -157,43 +181,22 @@ export default function Home() {
                         </DialogFooter>
                     </form>
                 </DialogContent>
-            </Dialog>
-
-            <ThemeToggle />
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Avatar className="cursor-pointer h-9 w-9">
-                  <AvatarImage src={user.photoURL || ''} alt={user.displayName || "User"} />
-                  <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 mt-2">
-                <DropdownMenuLabel>
-                  <p className="font-medium truncate">{user.displayName || "No name"}</p>
-                  <p className="text-xs text-muted-foreground font-normal truncate">{user.email}</p>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive">
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </Dialog>
+            </div>
           </div>
-        </header>
-        
-        <main className="flex-1 overflow-y-auto p-8">
+          
+          <div className="mt-12 w-full max-w-7xl">
             {apps.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {apps.map((app) => (
-                        <Card key={app.id} className="hover:shadow-lg transition-shadow duration-300 overflow-hidden">
-                             <CardContent className="p-0">
+                        <Card key={app.id} className="hover:shadow-lg transition-shadow duration-300 overflow-hidden group">
+                            <CardContent className="p-0 relative">
                                 <Image
                                     src="https://placehold.co/600x400.png"
                                     alt={app.name}
                                     width={600}
                                     height={400}
-                                    className="object-cover w-full h-40"
+                                    className="object-cover w-full h-40 group-hover:scale-105 transition-transform duration-300"
                                     data-ai-hint="app interface"
                                 />
                             </CardContent>
@@ -204,16 +207,17 @@ export default function Home() {
                     ))}
                 </div>
             ) : (
-                <div className="flex flex-col items-center justify-center h-full text-center border-2 border-dashed border-border rounded-lg">
+                <div className="flex flex-col items-center justify-center h-full text-center border-2 border-dashed border-border rounded-lg py-24 px-8">
                     <div className="bg-primary/10 p-4 rounded-full">
                         <Plus className="h-8 w-8 text-primary" />
                     </div>
                     <h2 className="mt-6 text-2xl font-semibold">Create your first app</h2>
                     <p className="mt-2 text-muted-foreground max-w-xs">
-                        Get started by clicking the &quot;New App&quot; button to create your first application.
+                        Get started by clicking the plus button to create your first application.
                     </p>
                 </div>
             )}
+          </div>
         </main>
       </div>
     );
