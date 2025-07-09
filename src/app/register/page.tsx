@@ -1,27 +1,36 @@
 import { RegisterForm } from '@/components/auth/RegisterForm';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function RegisterPage() {
   return (
-    <div className="flex min-h-screen flex-col justify-center items-center bg-background p-4">
-       <div className="w-full max-w-sm space-y-4">
-        <div className="border border-border/50 rounded-lg p-8 space-y-4">
-          <div className="text-center space-y-3 mb-4">
-              <h1 className="text-5xl font-bold tracking-tight text-primary" style={{fontFamily: "'Brush Script MT', 'Cursive'"}}>ZORO</h1>
-              <h2 className="text-md font-semibold text-muted-foreground px-4">
-                Sign up to see photos and videos from your friends.
-              </h2>
+    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
+       <div className="flex items-center justify-center py-12">
+        <div className="mx-auto grid w-[350px] gap-6 animate-slide-in-from-bottom [animation-fill-mode:backwards]">
+          <div className="grid gap-2 text-center">
+            <h1 className="text-3xl font-bold">Sign Up</h1>
+            <p className="text-balance text-muted-foreground">
+              Enter your information to create an account
+            </p>
           </div>
           <RegisterForm />
+          <div className="mt-4 text-center text-sm">
+            Already have an account?{" "}
+            <Link href="/login" className="underline text-primary font-medium">
+              Login
+            </Link>
+          </div>
         </div>
-        <div className="border border-border/50 rounded-lg p-6 text-center">
-            <p className="text-sm text-foreground">
-              Have an account?{' '}
-              <Link href="/login" className="font-semibold leading-6 text-primary hover:text-primary/90">
-                Log in
-              </Link>
-            </p>
-        </div>
+      </div>
+      <div className="hidden bg-muted lg:block">
+         <Image
+          src="https://placehold.co/1200x800.png"
+          alt="Abstract illustration"
+          width={1200}
+          height={800}
+          className="h-full w-full object-cover dark:brightness-[0.2]"
+          data-ai-hint="abstract tech"
+        />
       </div>
     </div>
   );

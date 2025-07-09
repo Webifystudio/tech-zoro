@@ -11,7 +11,7 @@ import { auth, isFirebaseConfigured, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Loader2, Plus, Search, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -179,7 +179,7 @@ export default function Home() {
         </header>
 
         <main className="flex flex-1 flex-col items-center p-4 py-12 sm:p-6 md:p-8">
-          <div className="w-full max-w-3xl text-center">
+          <div className="w-full max-w-3xl text-center animate-slide-in-from-bottom [animation-fill-mode:backwards]">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
               Make your business websites by creating an app
             </h2>
@@ -234,8 +234,8 @@ export default function Home() {
             {apps.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {apps.map((app) => (
-                        <Link href={`/app/${app.id}`} key={app.id}>
-                          <Card className="hover:shadow-lg transition-shadow duration-300 overflow-hidden group">
+                        <Link href={`/app/${app.id}`} key={app.id} className="block">
+                          <Card className="hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden group">
                               <CardContent className="p-0 relative">
                                   <Image
                                       src="https://placehold.co/600x400.png"

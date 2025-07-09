@@ -12,9 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
-import { Separator } from '../ui/separator';
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -26,14 +24,12 @@ const usernameSchema = z.object({
   username: z.string().min(3, { message: "Username must be at least 3 characters." }),
 });
 
-
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
     <title>Google</title>
     <path fill="currentColor" d="M12.48 10.92v3.28h7.84c-.24 1.84-.85 3.18-1.73 4.1-1.02 1.02-2.9 2.26-4.97 2.26-3.98 0-6.92-3.25-6.92-7.3s2.94-7.3 6.92-7.3c2.25 0 3.86.88 4.79 1.8l2.6-2.58C18.94 1.23 16.2 0 12.48 0 5.88 0 .04 5.88.04 12.5s5.84 12.5 12.44 12.5c7.05 0 12.1-4.78 12.1-12.64 0-.87-.1-1.6-.25-2.28H12.48z" />
   </svg>
 );
-
 
 export function RegisterForm() {
   const router = useRouter();
@@ -162,62 +158,46 @@ export function RegisterForm() {
   
   if (googleUser) {
     return (
-        <Card className="shadow-none border-0 bg-transparent">
-             <div className="text-center mb-4">
+        <div className="grid gap-4">
+             <div className="text-center">
                 <h2 className="text-xl font-semibold">Choose a username</h2>
                 <p className="text-sm text-muted-foreground">Your username is unique. You can always change it later.</p>
              </div>
             <Form {...usernameForm}>
-                <form onSubmit={usernameForm.handleSubmit(onUsernameSubmit)} className="space-y-4">
-                    <CardContent className="p-0">
-                         <FormField
-                            control={usernameForm.control}
-                            name="username"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormControl>
-                                    <Input placeholder="Username" {...field} className="bg-muted/50 border-border/50" />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                    </CardContent>
-                    <CardFooter className="p-0">
-                         <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Complete Registration
-                        </Button>
-                    </CardFooter>
+                <form onSubmit={usernameForm.handleSubmit(onUsernameSubmit)} className="grid gap-4">
+                    <FormField
+                        control={usernameForm.control}
+                        name="username"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormControl>
+                                <Input placeholder="Username" {...field} autoFocus/>
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Complete Registration
+                    </Button>
                 </form>
             </Form>
-        </Card>
+        </div>
     )
   }
 
   return (
-    <Card className="shadow-none border-0 bg-transparent">
-        <CardContent className="space-y-4 p-0">
-            <Button variant="outline" className="w-full font-semibold text-foreground/80 hover:text-primary" onClick={handleGoogleSignUp} disabled={isLoading || isGoogleLoading}>
-                {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
-                Sign up with Google
-            </Button>
-            <div className="flex items-center w-full">
-                <Separator className="flex-1" />
-                <span className="px-4 text-xs text-muted-foreground font-semibold">OR</span>
-                <Separator className="flex-1" />
-            </div>
-        </CardContent>
+    <div className="grid gap-4">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4">
-          <CardContent className="space-y-4 p-0">
-             <FormField
+        <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+            <FormField
               control={form.control}
-              name="email"
+              name="username"
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Input placeholder="Email address" {...field} className="bg-muted/50 border-border/50" />
+                    <Input placeholder="Username" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -225,11 +205,11 @@ export function RegisterForm() {
             />
             <FormField
               control={form.control}
-              name="username"
+              name="email"
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Input placeholder="Username" {...field} className="bg-muted/50 border-border/50" />
+                    <Input placeholder="Email address" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -241,27 +221,35 @@ export function RegisterForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Input type="password" placeholder="Password" {...field} className="bg-muted/50 border-border/50" />
+                    <Input type="password" placeholder="Password" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          </CardContent>
-          <CardFooter className="p-0 flex-col gap-4 mt-4">
-             <p className="text-xs text-center text-muted-foreground">
-                People who use our service may have uploaded your contact information to ZORO.
-            </p>
-             <p className="text-xs text-center text-muted-foreground">
+            <p className="text-xs text-center text-muted-foreground px-4">
                 By signing up, you agree to our Terms, Privacy Policy and Cookies Policy.
             </p>
             <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign Up
             </Button>
-          </CardFooter>
         </form>
       </Form>
-    </Card>
+       <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                Or continue with
+                </span>
+            </div>
+        </div>
+      <Button variant="outline" className="w-full font-semibold" onClick={handleGoogleSignUp} disabled={isLoading || isGoogleLoading}>
+        {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
+        Sign up with Google
+      </Button>
+    </div>
   );
 }
