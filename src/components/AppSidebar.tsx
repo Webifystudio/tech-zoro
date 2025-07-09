@@ -1,7 +1,7 @@
 "use client";
 
 import { Sidebar, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarContent } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, Globe } from 'lucide-react';
+import { LayoutDashboard, Settings, Globe, LayoutGrid, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
 
@@ -12,6 +12,8 @@ export function AppSidebar() {
 
   const menuItems = [
     { href: `/app/${appId}`, label: 'Dashboard', icon: LayoutDashboard },
+    { href: `/app/${appId}/categories`, label: 'Categories', icon: LayoutGrid },
+    { href: `/app/${appId}/products`, label: 'Products', icon: ShoppingBag },
     { href: `/app/${appId}/settings`, label: 'Settings', icon: Settings },
   ];
 
