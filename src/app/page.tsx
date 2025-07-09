@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
+import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import Image from 'next/image';
+import Link from 'next/link';
 
 import { auth, isFirebaseConfigured } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Search } from 'lucide-react';
+import { Loader2, Plus, Search, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -35,7 +36,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 export default function Home() {
   const router = useRouter();
   const { toast } = useToast();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   
   const [apps, setApps] = useState<{ id: number; name: string }[]>([]);
@@ -112,7 +113,9 @@ export default function Home() {
     return (
       <div className="flex min-h-screen w-full flex-col bg-muted/20">
         <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 sm:px-6">
-          <h1 className="text-2xl font-bold tracking-tight text-primary" style={{fontFamily: "'Brush Script MT', 'Cursive'"}}>ZORO</h1>
+          <Link href="/">
+            <h1 className="text-2xl font-bold tracking-tight text-primary cursor-pointer" style={{fontFamily: "'Brush Script MT', 'Cursive'"}}>ZORO</h1>
+          </Link>
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <DropdownMenu>
@@ -127,6 +130,13 @@ export default function Home() {
                   <p className="font-medium truncate">{user.displayName || "No name"}</p>
                   <p className="text-xs text-muted-foreground font-normal truncate">{user.email}</p>
                 </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild className="cursor-pointer">
+                  <Link href="/profile">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive">
                   Logout
@@ -189,21 +199,23 @@ export default function Home() {
             {apps.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {apps.map((app) => (
-                        <Card key={app.id} className="hover:shadow-lg transition-shadow duration-300 overflow-hidden group">
-                            <CardContent className="p-0 relative">
-                                <Image
-                                    src="https://placehold.co/600x400.png"
-                                    alt={app.name}
-                                    width={600}
-                                    height={400}
-                                    className="object-cover w-full h-40 group-hover:scale-105 transition-transform duration-300"
-                                    data-ai-hint="app interface"
-                                />
-                            </CardContent>
-                            <CardHeader>
-                                <CardTitle className="truncate">{app.name}</CardTitle>
-                            </CardHeader>
-                        </Card>
+                        <Link href={`/app/${app.id}`} key={app.id}>
+                          <Card className="hover:shadow-lg transition-shadow duration-300 overflow-hidden group">
+                              <CardContent className="p-0 relative">
+                                  <Image
+                                      src="https://placehold.co/600x400.png"
+                                      alt={app.name}
+                                      width={600}
+                                      height={400}
+                                      className="object-cover w-full h-40 group-hover:scale-105 transition-transform duration-300"
+                                      data-ai-hint="app interface"
+                                  />
+                              </CardContent>
+                              <CardHeader>
+                                  <CardTitle className="truncate">{app.name}</CardTitle>
+                              </CardHeader>
+                          </Card>
+                        </Link>
                     ))}
                 </div>
             ) : (
