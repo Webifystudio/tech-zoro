@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function Home() {
   const router = useRouter();
@@ -157,6 +158,8 @@ export default function Home() {
                     </form>
                 </DialogContent>
             </Dialog>
+
+            <ThemeToggle />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
