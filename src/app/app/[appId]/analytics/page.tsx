@@ -1,11 +1,16 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Lightbulb, Map, Smartphone } from 'lucide-react';
+import { Lightbulb, Map, Smartphone, Loader2 } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Mock data for demonstration
 const visitorsData = [
@@ -38,6 +43,77 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 export default function AnalyticsPage() {
   const params = useParams();
   const appId = params.appId as string;
+  const { toast } = useToast();
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [googleTagId, setGoogleTagId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (appId && db) {
+      const fetchSettings = async () => {
+        setIsLoading(true);
+        const appDocRef = doc(db, 'apps', appId);
+        try {
+          const appDocSnap = await getDoc(appDocRef);
+          if (appDocSnap.exists()) {
+            const appData = appDocSnap.data();
+            if (appData.marketing?.googleTagId) {
+              setGoogleTagId(appData.marketing.googleTagId);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching marketing settings: ", error);
+          toast({ variant: 'destructive', title: "Error", description: "Could not fetch settings." });
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchSettings();
+    } else {
+        setIsLoading(false);
+    }
+  }, [appId, toast]);
+
+  const HowToCard = () => (
+    <Card className="bg-primary/5 border-primary/20">
+      <CardHeader>
+        <div className="flex items-start gap-4">
+          <Lightbulb className="h-8 w-8 text-primary mt-1" />
+          <div>
+            <CardTitle>How to Enable Analytics</CardTitle>
+            <CardDescription>Follow these steps to connect your Google Analytics account and view live data.</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <ol className="list-decimal list-inside space-y-3 text-sm">
+          <li>Go to your <a href="https://analytics.google.com/" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline">Google Analytics</a> account and create a new property for your store.</li>
+          <li>Find your <strong>Measurement ID</strong> for the web data stream. It will look like <code className="bg-muted px-1.5 py-0.5 rounded">G-XXXXXXXXXX</code>.</li>
+          <li>
+            Navigate to the{' '}
+            <Button variant="link" asChild className="p-0 h-auto font-medium"><Link href={`/app/${appId}/marketing`}>Marketing</Link></Button>
+            {' '}page in this dashboard.
+          </li>
+          <li>Scroll down to the <strong>Google Analytics</strong> card and paste your Measurement ID into the "Google Tag ID" field.</li>
+          <li>Click "Save Changes". Data will start appearing here within 24-48 hours.</li>
+        </ol>
+      </CardContent>
+    </Card>
+  );
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <Skeleton className="h-10 w-1/3" />
+        <Skeleton className="h-5 w-2/3" />
+        <Skeleton className="h-64 w-full" />
+        <div className="grid md:grid-cols-2 gap-8">
+          <Skeleton className="h-80 w-full" />
+          <Skeleton className="h-80 w-full" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -46,108 +122,90 @@ export default function AnalyticsPage() {
         <p className="text-muted-foreground">Detailed insights into your store's performance.</p>
       </div>
 
-      <Card className="bg-primary/5 border-primary/20">
-        <CardHeader>
-          <div className="flex items-start gap-4">
-            <Lightbulb className="h-8 w-8 text-primary mt-1" />
-            <div>
-              <CardTitle>How to Enable Analytics</CardTitle>
-              <CardDescription>Follow these steps to connect your Google Analytics account and view live data.</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <ol className="list-decimal list-inside space-y-3 text-sm">
-            <li>Go to your <a href="https://analytics.google.com/" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline">Google Analytics</a> account and create a new property for your store.</li>
-            <li>Find your <strong>Measurement ID</strong> for the web data stream. It will look like <code className="bg-muted px-1.5 py-0.5 rounded">G-XXXXXXXXXX</code>.</li>
-            <li>
-              Navigate to the{' '}
-              <Button variant="link" asChild className="p-0 h-auto font-medium"><Link href={`/app/${appId}/marketing`}>Marketing</Link></Button>
-              {' '}page in this dashboard.
-            </li>
-            <li>Scroll down to the <strong>Google Analytics</strong> card and paste your Measurement ID into the "Google Tag ID" field.</li>
-            <li>Click "Save Changes". Data will start appearing here within 24-48 hours.</li>
-          </ol>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Visitors Overview</CardTitle>
-            <CardDescription>A look at your daily visitors over the last week. (Sample Data)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={visitorsData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}/>
-                <Legend />
-                <Bar dataKey="visitors" fill="hsl(var(--primary))" name="Unique Visitors" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <div className="grid gap-8 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Most Viewed Products</CardTitle>
-              <CardDescription>Your top 5 most viewed products. (Sample Data)</CardDescription>
-            </CardHeader>
-            <CardContent>
-               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={productData} layout="vertical">
+      {!googleTagId ? (
+        <HowToCard />
+      ) : (
+        <>
+          <HowToCard />
+          <div className="grid gap-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Visitors Overview</CardTitle>
+                <CardDescription>A look at your daily visitors over the last week. (Sample Data)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={visitorsData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="name" type="category" width={100} />
+                    <XAxis dataKey="name" />
+                    <YAxis />
                     <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}/>
                     <Legend />
-                    <Bar dataKey="views" fill="hsl(var(--primary))" name="Product Views" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Platform Clicks</CardTitle>
-              <CardDescription>Breakdown of clicks by platform. (Sample Data)</CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center">
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie data={platformData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
-                    {platformData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}/>
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-        
-        <Card>
-            <CardHeader>
-                <CardTitle>Geo & Device Info</CardTitle>
-                <CardDescription>Geographical and device analytics will appear here once Google Analytics is connected.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                 <div className="flex flex-col items-center justify-center h-48 text-center border-2 border-dashed border-border rounded-lg p-8">
-                    <div className="flex items-center gap-4">
-                        <Map className="h-12 w-12 text-muted-foreground" />
-                        <Smartphone className="h-12 w-12 text-muted-foreground" />
+                    <Bar dataKey="visitors" fill="hsl(var(--primary))" name="Unique Visitors" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-8 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Most Viewed Products</CardTitle>
+                  <CardDescription>Your top 5 most viewed products. (Sample Data)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={productData} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" />
+                        <YAxis dataKey="name" type="category" width={100} />
+                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}/>
+                        <Legend />
+                        <Bar dataKey="views" fill="hsl(var(--primary))" name="Product Views" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Platform Clicks</CardTitle>
+                  <CardDescription>Breakdown of clicks by platform. (Sample Data)</CardDescription>
+                </CardHeader>
+                <CardContent className="flex justify-center">
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie data={platformData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                        {platformData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}/>
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>Geo & Device Info</CardTitle>
+                    <CardDescription>Geographical and device analytics will appear here once Google Analytics is connected.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex flex-col items-center justify-center h-48 text-center border-2 border-dashed border-border rounded-lg p-8">
+                        <div className="flex items-center gap-4">
+                            <Map className="h-12 w-12 text-muted-foreground" />
+                            <Smartphone className="h-12 w-12 text-muted-foreground" />
+                        </div>
+                        <h3 className="mt-4 text-lg font-semibold">Data is being collected...</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">It can take up to 48 hours for data to appear.</p>
                     </div>
-                    <h3 className="mt-4 text-lg font-semibold">Connect Google Analytics</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Follow the guide above to see this data.</p>
-                </div>
-            </CardContent>
-        </Card>
-      </div>
+                </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
 }

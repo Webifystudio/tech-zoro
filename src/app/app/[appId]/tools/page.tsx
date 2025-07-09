@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Star, Ticket, QrCode, Loader2, PlusCircle } from 'lucide-react';
+import { Upload, Star, Ticket, QrCode, Loader2, PlusCircle, Calendar as CalendarIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { collection, addDoc, query, onSnapshot, orderBy, serverTimestamp, deleteDoc, doc, Timestamp } from 'firebase/firestore';
@@ -16,6 +16,10 @@ import { auth, db } from '@/lib/firebase';
 import { useParams } from 'next/navigation';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface Coupon {
     id: string;
@@ -24,6 +28,9 @@ interface Coupon {
     discountValue: number;
     status: 'Active' | 'Inactive';
     createdAt: Timestamp;
+    expiresAt?: Timestamp;
+    usageLimit?: number;
+    uses?: number;
 }
 
 export default function ToolsPage() {
@@ -41,11 +48,21 @@ export default function ToolsPage() {
   const [couponCode, setCouponCode] = useState('');
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
   const [discountValue, setDiscountValue] = useState('');
+  const [usageLimit, setUsageLimit] = useState('');
+  const [expiresAt, setExpiresAt] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => setUser(currentUser));
     return () => unsubscribe();
   }, []);
+  
+  const resetCouponForm = () => {
+    setCouponCode('');
+    setDiscountValue('');
+    setDiscountType('percentage');
+    setUsageLimit('');
+    setExpiresAt(undefined);
+  }
 
   useEffect(() => {
     if (user && db && appId) {
@@ -83,18 +100,27 @@ export default function ToolsPage() {
     if (!couponCode || !discountValue || !db) return;
     setIsCreatingCoupon(true);
     try {
-        await addDoc(collection(db, "apps", appId, "coupons"), {
-            code: couponCode,
+        const newCoupon: { [key: string]: any } = {
+            code: couponCode.toUpperCase(),
             discountType: discountType,
             discountValue: parseFloat(discountValue),
             status: 'Active',
             createdAt: serverTimestamp(),
-        });
+            uses: 0,
+        };
+
+        if (usageLimit) {
+            newCoupon.usageLimit = parseInt(usageLimit, 10);
+        }
+        if (expiresAt) {
+            newCoupon.expiresAt = Timestamp.fromDate(expiresAt);
+        }
+
+        await addDoc(collection(db, "apps", appId, "coupons"), newCoupon);
+        
         toast({ title: 'Coupon Created', description: `Coupon "${couponCode}" has been added.` });
         setIsCouponDialogOpen(false);
-        setCouponCode('');
-        setDiscountValue('');
-        setDiscountType('percentage');
+        resetCouponForm();
     } catch(error: any) {
         toast({ variant: 'destructive', title: 'Failed to create coupon', description: error.message });
     } finally {
@@ -124,6 +150,8 @@ export default function ToolsPage() {
                         <TableRow>
                             <TableHead>Code</TableHead>
                             <TableHead>Discount</TableHead>
+                            <TableHead>Usage</TableHead>
+                            <TableHead>Expires</TableHead>
                             <TableHead>Status</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -132,6 +160,8 @@ export default function ToolsPage() {
                             <TableRow key={coupon.id}>
                                 <TableCell className="font-medium">{coupon.code}</TableCell>
                                 <TableCell>{coupon.discountValue}{coupon.discountType === 'percentage' ? '%' : ' (fixed)'} OFF</TableCell>
+                                <TableCell>{coupon.uses || 0} / {coupon.usageLimit || '∞'}</TableCell>
+                                <TableCell>{coupon.expiresAt ? format(coupon.expiresAt.toDate(), 'PPP') : 'Never'}</TableCell>
                                 <TableCell><Badge variant={coupon.status === 'Active' ? 'default' : 'secondary'}>{coupon.status}</Badge></TableCell>
                             </TableRow>
                         ))}
@@ -142,7 +172,7 @@ export default function ToolsPage() {
             )}
           </CardContent>
           <CardFooter>
-            <Dialog open={isCouponDialogOpen} onOpenChange={setIsCouponDialogOpen}>
+            <Dialog open={isCouponDialogOpen} onOpenChange={(open) => { setIsCouponDialogOpen(open); if(!open) resetCouponForm(); }}>
                 <DialogTrigger asChild>
                     <Button><PlusCircle className="mr-2 h-4 w-4" />Create New Coupon</Button>
                 </DialogTrigger>
@@ -171,6 +201,37 @@ export default function ToolsPage() {
                                 <div className="space-y-2">
                                     <Label htmlFor="discountValue">Value</Label>
                                     <Input id="discountValue" type="number" value={discountValue} onChange={e => setDiscountValue(e.target.value)} required />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="usageLimit">Usage Limit (optional)</Label>
+                                    <Input id="usageLimit" type="number" placeholder="e.g., 100" value={usageLimit} onChange={e => setUsageLimit(e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="expiresAt">Expires At (optional)</Label>
+                                     <Popover>
+                                        <PopoverTrigger asChild>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                            "w-full justify-start text-left font-normal",
+                                            !expiresAt && "text-muted-foreground"
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {expiresAt ? format(expiresAt, "PPP") : <span>Pick a date</span>}
+                                        </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                            mode="single"
+                                            selected={expiresAt}
+                                            onSelect={setExpiresAt}
+                                            initialFocus
+                                        />
+                                        </PopoverContent>
+                                    </Popover>
                                 </div>
                             </div>
                         </div>

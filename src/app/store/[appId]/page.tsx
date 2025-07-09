@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { collection, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
@@ -41,15 +41,18 @@ interface AppData {
 
 export default function StorefrontPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const appId = params.appId as string;
     
   const [appData, setAppData] = useState<AppData | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!appId || !db) return;
+    setIsLoading(true);
 
     const unsubApp = onSnapshot(doc(db, 'apps', appId), (doc) => {
       if (doc.exists()) {
@@ -62,7 +65,8 @@ export default function StorefrontPage() {
     });
 
     const unsubProducts = onSnapshot(query(collection(db, "apps", appId, "products"), orderBy("createdAt", "desc")), (snapshot) => {
-      setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
+      const fetchedProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      setProducts(fetchedProducts);
       setIsLoading(false);
     });
     
@@ -72,6 +76,19 @@ export default function StorefrontPage() {
       unsubProducts();
     };
   }, [appId]);
+
+  useEffect(() => {
+    const searchTerm = searchParams.get('search');
+    if (searchTerm) {
+        const filtered = products.filter(product => 
+            product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+        setFilteredProducts(filtered);
+    } else {
+        setFilteredProducts(products);
+    }
+  }, [searchParams, products]);
 
   if (isLoading) {
     return (
@@ -92,6 +109,8 @@ export default function StorefrontPage() {
       </div>
     );
   }
+  
+  const productsToShow = searchParams.get('search') ? filteredProducts : products;
 
   return (
     <>
@@ -128,14 +147,16 @@ export default function StorefrontPage() {
 
         <section id="products">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold tracking-tight">New Arrivals</h2>
-            <Button variant="ghost" asChild>
-              <Link href="#">View All <ArrowRight className="ml-2 h-4 w-4" /></Link>
-            </Button>
+            <h2 className="text-2xl font-bold tracking-tight">{searchParams.get('search') ? `Search results for "${searchParams.get('search')}"` : 'New Arrivals'}</h2>
+            {!searchParams.get('search') && 
+              <Button variant="ghost" asChild>
+                <Link href="#">View All <ArrowRight className="ml-2 h-4 w-4" /></Link>
+              </Button>
+            }
           </div>
-          {products.length > 0 ? (
+          {productsToShow.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {products.map(product => (
+              {productsToShow.map(product => (
                 <Link key={product.id} href={`/store/${appId}/product/${product.id}`} className="block">
                   <div className="bg-background rounded-lg border overflow-hidden flex flex-col group transition-all hover:shadow-xl hover:-translate-y-1 h-full">
                     <div className="relative h-56 w-full overflow-hidden">
@@ -158,8 +179,8 @@ export default function StorefrontPage() {
             </div>
           ) : (
             <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                <h3 className="text-xl font-semibold">No Products Yet</h3>
-                <p className="mt-1 text-muted-foreground">Products added in the dashboard will appear here.</p>
+                <h3 className="text-xl font-semibold">{searchParams.get('search') ? 'No Products Found' : 'No Products Yet'}</h3>
+                <p className="mt-1 text-muted-foreground">{searchParams.get('search') ? 'Try a different search term.' : 'Products added in the dashboard will appear here.'}</p>
             </div>
           )}
         </section>

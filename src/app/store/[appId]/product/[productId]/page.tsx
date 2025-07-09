@@ -4,7 +4,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import { doc, getDoc, collection, addDoc, query, onSnapshot, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, query, onSnapshot, serverTimestamp, orderBy, Timestamp, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 
@@ -14,9 +14,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Star, Heart, ShoppingCart, Loader2, Trash2, Zap } from 'lucide-react';
-import { format } from 'date-fns';
+import { Star, Heart, ShoppingCart, Loader2, Trash2, Zap, Tag } from 'lucide-react';
+import { format, isPast } from 'date-fns';
 import { Label } from '@/components/ui/label';
 
 interface Product {
@@ -35,6 +36,17 @@ interface Review {
   userAvatar: string | null;
   createdAt: Timestamp;
 }
+
+interface Coupon {
+    id: string;
+    code: string;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
+    expiresAt?: Timestamp;
+    usageLimit?: number;
+    uses?: number;
+}
+
 
 const StarRating = ({ rating, size = 'h-5 w-5' }: { rating: number; size?: string }) => (
   <div className="flex items-center">
@@ -64,10 +76,22 @@ export default function ProductDetailPage() {
   const [newReviewComment, setNewReviewComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [finalPrice, setFinalPrice] = useState<number | null>(null);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => setUser(currentUser));
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (product) {
+      setFinalPrice(product.price);
+    }
+  }, [product]);
 
   useEffect(() => {
     if (!appId || !productId || !db) return;
@@ -95,6 +119,64 @@ export default function ProductDetailPage() {
 
     return () => unsubReviews();
   }, [appId, productId]);
+  
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim() || !product) return;
+    setIsApplyingCoupon(true);
+    setCouponError(null);
+
+    try {
+        const couponsRef = collection(db, 'apps', appId, 'coupons');
+        const q = query(couponsRef, where('code', '==', couponCode.trim().toUpperCase()));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            setCouponError('Invalid coupon code.');
+            toast({ variant: 'destructive', title: 'Invalid Coupon' });
+            return;
+        }
+
+        const couponDoc = querySnapshot.docs[0];
+        const couponData = { id: couponDoc.id, ...couponDoc.data() } as Coupon;
+
+        if (couponData.expiresAt && isPast(couponData.expiresAt.toDate())) {
+            setCouponError('This coupon has expired.');
+            toast({ variant: 'destructive', title: 'Coupon Expired' });
+            return;
+        }
+
+        if (couponData.usageLimit && (couponData.uses || 0) >= couponData.usageLimit) {
+            setCouponError('This coupon has reached its usage limit.');
+            toast({ variant: 'destructive', title: 'Coupon Limit Reached' });
+            return;
+        }
+
+        let newPrice = product.price;
+        if (couponData.discountType === 'fixed') {
+            newPrice -= couponData.discountValue;
+        } else { // percentage
+            newPrice -= product.price * (couponData.discountValue / 100);
+        }
+        
+        setFinalPrice(Math.max(0, newPrice));
+        setAppliedCoupon(couponData);
+        toast({ title: "Coupon Applied Successfully!" });
+
+    } catch (error) {
+        setCouponError('Could not apply coupon.');
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not apply coupon.' });
+    } finally {
+        setIsApplyingCoupon(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setCouponError(null);
+    if(product) setFinalPrice(product.price);
+    toast({ title: 'Coupon removed.' });
+  }
 
   const averageRating = reviews.length > 0 ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length : 0;
 
@@ -157,10 +239,47 @@ export default function ProductDetailPage() {
                     <StarRating rating={averageRating} />
                     <span className="text-muted-foreground text-sm">({reviews.length} reviews)</span>
                 </div>
-                <p className="text-3xl font-bold text-primary">${product.price.toFixed(2)}</p>
+                <div>
+                    {appliedCoupon && finalPrice !== null ? (
+                        <div className="flex items-baseline gap-2">
+                            <p className="text-3xl font-bold text-primary">${finalPrice.toFixed(2)}</p>
+                            <p className="text-xl font-medium text-muted-foreground line-through">${product.price.toFixed(2)}</p>
+                        </div>
+                    ) : (
+                        <p className="text-3xl font-bold text-primary">${product.price.toFixed(2)}</p>
+                    )}
+                </div>
                 <p className="text-muted-foreground leading-relaxed">{product.description}</p>
                 <Separator />
-                <div className="flex items-center gap-4 mt-4">
+                 <div className="space-y-4">
+                    <Label htmlFor="coupon">Have a coupon?</Label>
+                    {appliedCoupon ? (
+                        <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                            <p className="text-sm font-medium text-green-700 dark:text-green-300">
+                                Coupon <span className="font-bold">{appliedCoupon.code}</span> applied!
+                            </p>
+                            <Button variant="ghost" size="sm" onClick={removeCoupon}>Remove</Button>
+                        </div>
+                    ) : (
+                        <div className="flex gap-2">
+                            <Input 
+                                id="coupon" 
+                                placeholder="Enter coupon code" 
+                                className="flex-1"
+                                value={couponCode}
+                                onChange={(e) => setCouponCode(e.target.value)}
+                                disabled={isApplyingCoupon}
+                            />
+                            <Button onClick={handleApplyCoupon} disabled={isApplyingCoupon}>
+                                {isApplyingCoupon && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                Apply
+                            </Button>
+                        </div>
+                    )}
+                    {couponError && <p className="text-sm text-destructive">{couponError}</p>}
+                </div>
+                <Separator />
+                <div className="flex items-center gap-4 mt-2">
                     <div className="flex-1 flex flex-col sm:flex-row gap-4">
                         {isInCart ? (
                             <Button size="lg" variant="outline" className="w-full" onClick={() => {
