@@ -95,7 +95,7 @@ export default function Home() {
             <p className="text-lg text-muted-foreground">
               Authenticated as:
             </p>
-            <p className="font-semibold text-foreground text-xl mt-1">{user.email}</p>
+            <p className="font-semibold text-foreground text-xl mt-1">{user.displayName || user.email}</p>
             <Button onClick={handleLogout} className="mt-8 w-full">
               Logout
             </Button>

@@ -11,9 +11,11 @@ import { auth, isFirebaseConfigured } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import Link from 'next/link';
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -66,18 +68,17 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-none border-0 bg-transparent">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4 pt-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <CardContent className="space-y-4 p-0">
             <FormField
               control={form.control}
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="name@example.com" {...field} />
+                    <Input placeholder="Email address" {...field} className="bg-muted/50 border-border/50" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -88,20 +89,27 @@ export function LoginForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
+                    <Input type="password" placeholder="Password" {...field} className="bg-muted/50 border-border/50" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </CardContent>
-          <CardFooter>
+          <CardFooter className="p-0 flex-col gap-4">
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
+              Log In
             </Button>
+            <div className="flex items-center w-full">
+                <Separator className="flex-1" />
+                <span className="px-4 text-xs text-muted-foreground font-semibold">OR</span>
+                <Separator className="flex-1" />
+            </div>
+            <Link href="#" className="text-sm font-medium text-primary/90 hover:text-primary">
+                Forgot password?
+            </Link>
           </CardFooter>
         </form>
       </Form>

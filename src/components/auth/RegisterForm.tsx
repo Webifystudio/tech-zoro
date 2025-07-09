@@ -5,18 +5,19 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 
 import { auth, isFirebaseConfigured } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
+  username: z.string().min(3, { message: "Username must be at least 3 characters." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
 });
 
@@ -29,6 +30,7 @@ export function RegisterForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: "",
+      username: "",
       password: "",
     },
   });
@@ -44,7 +46,12 @@ export function RegisterForm() {
     }
     setIsLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      
+      await updateProfile(userCredential.user, {
+        displayName: values.username,
+      });
+
       toast({
         title: "Account created!",
         description: "You have been successfully registered and logged in.",
@@ -69,18 +76,29 @@ export function RegisterForm() {
   }
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-none border-0 bg-transparent">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4 pt-6">
-            <FormField
+          <CardContent className="space-y-4 p-0">
+             <FormField
               control={form.control}
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="name@example.com" {...field} />
+                    <Input placeholder="Email address" {...field} className="bg-muted/50 border-border/50" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Input placeholder="Username" {...field} className="bg-muted/50 border-border/50" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -91,19 +109,24 @@ export function RegisterForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
+                    <Input type="password" placeholder="Password" {...field} className="bg-muted/50 border-border/50" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </CardContent>
-          <CardFooter>
+          <CardFooter className="p-0 flex-col gap-4 mt-4">
+             <p className="text-xs text-center text-muted-foreground">
+                People who use our service may have uploaded your contact information to ZORO.
+            </p>
+             <p className="text-xs text-center text-muted-foreground">
+                By signing up, you agree to our Terms, Privacy Policy and Cookies Policy.
+            </p>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create account
+              Sign Up
             </Button>
           </CardFooter>
         </form>
