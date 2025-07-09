@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import QRCode from 'qrcode.react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -8,27 +8,98 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Star, Ticket, QrCode } from 'lucide-react';
+import { Upload, Star, Ticket, QrCode, Loader2, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { collection, addDoc, query, onSnapshot, orderBy, serverTimestamp, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import { useParams } from 'next/navigation';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+interface Coupon {
+    id: string;
+    code: string;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
+    status: 'Active' | 'Inactive';
+    createdAt: Timestamp;
+}
 
 export default function ToolsPage() {
   const [qrValue, setQrValue] = useState('https://example.com');
   const { toast } = useToast();
+  const params = useParams();
+  const appId = params.appId as string;
+  const [user, setUser] = useState<User | null>(null);
+
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [isLoadingCoupons, setIsLoadingCoupons] = useState(true);
+  const [isCouponDialogOpen, setIsCouponDialogOpen] = useState(false);
+  const [isCreatingCoupon, setIsCreatingCoupon] = useState(false);
+
+  const [couponCode, setCouponCode] = useState('');
+  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
+  const [discountValue, setDiscountValue] = useState('');
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => setUser(currentUser));
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user && db && appId) {
+      const q = query(collection(db, "apps", appId, "coupons"), orderBy("createdAt", "desc"));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        setCoupons(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Coupon)));
+        setIsLoadingCoupons(false);
+      }, (error) => {
+        console.error("Error fetching coupons: ", error);
+        toast({ variant: 'destructive', title: "Error", description: "Could not fetch coupons." });
+        setIsLoadingCoupons(false);
+      });
+      return () => unsubscribe();
+    } else {
+      setIsLoadingCoupons(false);
+    }
+  }, [user, appId, toast]);
 
   const handleDownloadQR = () => {
-      const canvas = document.getElementById('qr-code-canvas') as HTMLCanvasElement;
-      if (canvas) {
-          const pngUrl = canvas
-            .toDataURL('image/png')
-            .replace('image/png', 'image/octet-stream');
-          let downloadLink = document.createElement('a');
-          downloadLink.href = pngUrl;
-          downloadLink.download = 'qrcode.png';
-          document.body.appendChild(downloadLink);
-          downloadLink.click();
-          document.body.removeChild(downloadLink);
-          toast({ title: "QR Code Downloaded!" });
-      }
+    const canvas = document.getElementById('qr-code-canvas') as HTMLCanvasElement;
+    if (canvas) {
+      const pngUrl = canvas.toDataURL('image/png').replace('image/png', 'image/octet-stream');
+      let downloadLink = document.createElement('a');
+      downloadLink.href = pngUrl;
+      downloadLink.download = 'qrcode.png';
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      toast({ title: "QR Code Downloaded!" });
+    }
+  }
+
+  const handleCreateCoupon = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!couponCode || !discountValue || !db) return;
+    setIsCreatingCoupon(true);
+    try {
+        await addDoc(collection(db, "apps", appId, "coupons"), {
+            code: couponCode,
+            discountType: discountType,
+            discountValue: parseFloat(discountValue),
+            status: 'Active',
+            createdAt: serverTimestamp(),
+        });
+        toast({ title: 'Coupon Created', description: `Coupon "${couponCode}" has been added.` });
+        setIsCouponDialogOpen(false);
+        setCouponCode('');
+        setDiscountValue('');
+        setDiscountType('percentage');
+    } catch(error: any) {
+        toast({ variant: 'destructive', title: 'Failed to create coupon', description: error.message });
+    } finally {
+        setIsCreatingCoupon(false);
+    }
   }
 
   return (
@@ -37,7 +108,7 @@ export default function ToolsPage() {
         <h1 className="text-3xl font-bold tracking-tight">Tools & Add-ons</h1>
         <p className="text-muted-foreground">Enhance your store with powerful tools.</p>
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         <Card>
           <CardHeader>
@@ -45,30 +116,74 @@ export default function ToolsPage() {
             <CardDescription>Create and manage discount codes for your customers.</CardDescription>
           </CardHeader>
           <CardContent>
-             <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Code</TableHead>
-                        <TableHead>Discount</TableHead>
-                        <TableHead>Status</TableHead>
-                    </TableRow>
-                </TableHeader>
-                 <TableBody>
-                    <TableRow>
-                        <TableCell>SUMMER20</TableCell>
-                        <TableCell>20% OFF</TableCell>
-                        <TableCell><Badge>Active</Badge></TableCell>
-                    </TableRow>
-                     <TableRow>
-                        <TableCell>SALE50</TableCell>
-                        <TableCell>50% OFF</TableCell>
-                        <TableCell><Badge>Active</Badge></TableCell>
-                    </TableRow>
-                 </TableBody>
-             </Table>
+            {isLoadingCoupons ? (
+                <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+            ) : coupons.length > 0 ? (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Code</TableHead>
+                            <TableHead>Discount</TableHead>
+                            <TableHead>Status</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {coupons.map(coupon => (
+                            <TableRow key={coupon.id}>
+                                <TableCell className="font-medium">{coupon.code}</TableCell>
+                                <TableCell>{coupon.discountValue}{coupon.discountType === 'percentage' ? '%' : ' (fixed)'} OFF</TableCell>
+                                <TableCell><Badge variant={coupon.status === 'Active' ? 'default' : 'secondary'}>{coupon.status}</Badge></TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            ) : (
+                <p className="text-center text-muted-foreground py-8">No coupons created yet.</p>
+            )}
           </CardContent>
           <CardFooter>
-            <Button>Create New Coupon</Button>
+            <Dialog open={isCouponDialogOpen} onOpenChange={setIsCouponDialogOpen}>
+                <DialogTrigger asChild>
+                    <Button><PlusCircle className="mr-2 h-4 w-4" />Create New Coupon</Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Create New Coupon</DialogTitle>
+                        <DialogDescription>Fill in the details for your new discount coupon.</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleCreateCoupon}>
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="couponCode">Coupon Code</Label>
+                                <Input id="couponCode" value={couponCode} onChange={e => setCouponCode(e.target.value.toUpperCase())} required />
+                            </div>
+                             <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="discountType">Discount Type</Label>
+                                    <Select value={discountType} onValueChange={(v) => setDiscountType(v as any)}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="percentage">Percentage (%)</SelectItem>
+                                            <SelectItem value="fixed">Fixed Amount</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="discountValue">Value</Label>
+                                    <Input id="discountValue" type="number" value={discountValue} onChange={e => setDiscountValue(e.target.value)} required />
+                                </div>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                            <Button type="submit" disabled={isCreatingCoupon}>
+                                {isCreatingCoupon && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Create Coupon
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
           </CardFooter>
         </Card>
 
@@ -78,23 +193,14 @@ export default function ToolsPage() {
             <CardDescription>Manage customer feedback and display it on your store.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-start gap-4 p-4 border rounded-lg">
-                <Star className="w-5 h-5 text-yellow-400 fill-yellow-400 mt-1" />
-                <div>
-                    <p className="font-semibold">"Amazing product! Highly recommended."</p>
-                    <p className="text-sm text-muted-foreground">- Happy Customer</p>
-                </div>
-            </div>
-            <div className="flex items-start gap-4 p-4 border rounded-lg">
-                <Star className="w-5 h-5 text-yellow-400 fill-yellow-400 mt-1" />
-                <div>
-                    <p className="font-semibold">"Great quality and fast shipping."</p>
-                    <p className="text-sm text-muted-foreground">- Another Customer</p>
-                </div>
+            <div className="flex flex-col items-center justify-center h-40 text-center border-2 border-dashed border-border rounded-lg">
+                <Star className="h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">Coming Soon!</h3>
+                <p className="mt-1 text-sm text-muted-foreground">This feature is under development.</p>
             </div>
           </CardContent>
            <CardFooter>
-            <Button variant="outline">Manage Reviews</Button>
+            <Button variant="outline" disabled>Manage Reviews</Button>
           </CardFooter>
         </Card>
 
@@ -123,15 +229,11 @@ export default function ToolsPage() {
             <CardDescription>Sell digital goods like PDFs and eBooks.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Card className="p-4 border-dashed">
-                <div className="flex flex-col items-center justify-center space-y-2 text-center p-8 cursor-pointer aspect-square">
-                    <div className="border-2 border-dashed border-muted-foreground/50 rounded-full p-4">
-                        <Upload className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <p className="font-semibold">Click to upload a file</p>
-                    <p className="text-sm text-muted-foreground">PDF, EPUB, etc. up to 50MB</p>
-                </div>
-            </Card>
+            <div className="flex flex-col items-center justify-center h-full text-center border-2 border-dashed border-border rounded-lg py-12 px-4">
+                <Upload className="h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">Coming Soon!</h3>
+                <p className="mt-1 text-sm text-muted-foreground">This feature is under development.</p>
+            </div>
           </CardContent>
         </Card>
       </div>

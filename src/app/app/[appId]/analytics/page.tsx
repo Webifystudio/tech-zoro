@@ -2,30 +2,21 @@
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { WifiOff } from 'lucide-react';
+import { WifiOff, AreaChart, BarChart2, PieChart as PieChartIcon } from 'lucide-react';
 
-const mostViewedProductsData = [
-  { name: 'Classic Tee', views: 4000 },
-  { name: 'Denim Jeans', views: 3000 },
-  { name: 'Leather Jacket', views: 2000 },
-  { name: 'Sneakers', views: 2780 },
-  { name: 'Beanie', views: 1890 },
-];
+const ComingSoonPlaceholder = ({title}: {title: string}) => (
+    <div className="flex flex-col items-center justify-center h-full text-center border-2 border-dashed border-border rounded-lg p-8 min-h-[300px]">
+        <div className="bg-primary/10 p-4 rounded-full mb-4">
+            {title.includes("Visitor") && <AreaChart className="h-8 w-8 text-primary" />}
+            {title.includes("Product") && <BarChart2 className="h-8 w-8 text-primary" />}
+            {title.includes("Platform") && <PieChartIcon className="h-8 w-8 text-primary" />}
+            {title.includes("Geo") && <WifiOff className="h-8 w-8 text-primary" />}
+        </div>
+        <h3 className="text-xl font-semibold">Analytics Coming Soon</h3>
+        <p className="mt-1 text-sm text-muted-foreground">Connect your data source to see live analytics.</p>
+    </div>
+);
 
-const platformClicksData = [
-  { name: 'Instagram', value: 400, color: '#8884d8' },
-  { name: 'WhatsApp', value: 300, color: '#82ca9d' },
-];
-
-const dailyVisitorsData = [
-  { date: 'Mon', visitors: 220 },
-  { date: 'Tue', visitors: 180 },
-  { date: 'Wed', visitors: 250 },
-  { date: 'Thu', visitors: 210 },
-  { date: 'Fri', visitors: 300 },
-  { date: 'Sat', visitors: 350 },
-  { date: 'Sun', visitors: 330 },
-];
 
 export default function AnalyticsPage() {
   return (
@@ -42,16 +33,7 @@ export default function AnalyticsPage() {
             <CardDescription>A look at your daily visitors over the last week.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={dailyVisitorsData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="visitors" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <ComingSoonPlaceholder title="Visitors Overview" />
           </CardContent>
         </Card>
 
@@ -62,15 +44,7 @@ export default function AnalyticsPage() {
               <CardDescription>Your top 5 most viewed products.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart layout="vertical" data={mostViewedProductsData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="name" type="category" width={80} />
-                  <Tooltip />
-                  <Bar dataKey="views" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+                <ComingSoonPlaceholder title="Most Viewed Products" />
             </CardContent>
           </Card>
           <Card>
@@ -79,26 +53,7 @@ export default function AnalyticsPage() {
               <CardDescription>Breakdown of clicks on your selling platforms.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={platformClicksData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {platformClicksData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              <ComingSoonPlaceholder title="Platform Clicks" />
             </CardContent>
           </Card>
         </div>

@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { uploadImage } from '@/lib/imgbb';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 
 import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
@@ -18,9 +18,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Loader2, Upload } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function AppSettingsPage({ params }: { params: { appId: string } }) {
+export default function AppSettingsPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const params = useParams();
+  const appId = params?.appId as string;
+
   const [user, setUser] = useState<User | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,11 +48,11 @@ export default function AppSettingsPage({ params }: { params: { appId: string } 
   }, [router]);
 
   useEffect(() => {
-    if (!user || !db || !params.appId) return;
+    if (!user || !db || !appId) return;
 
     const fetchAppData = async () => {
       setIsLoading(true);
-      const appDocRef = doc(db, 'apps', params.appId);
+      const appDocRef = doc(db, 'apps', appId);
       try {
         const appDocSnap = await getDoc(appDocRef);
         if (appDocSnap.exists()) {
@@ -76,7 +79,7 @@ export default function AppSettingsPage({ params }: { params: { appId: string } 
     };
 
     fetchAppData();
-  }, [user, params.appId, router, toast]);
+  }, [user, appId, router, toast]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -88,7 +91,7 @@ export default function AppSettingsPage({ params }: { params: { appId: string } 
 
   const handleSaveChanges = async (e: FormEvent) => {
     e.preventDefault();
-    if (!db) return;
+    if (!db || !appId) return;
     setIsSaving(true);
 
     try {
@@ -105,7 +108,7 @@ export default function AppSettingsPage({ params }: { params: { appId: string } 
         }
       }
       
-      const appDocRef = doc(db, 'apps', params.appId);
+      const appDocRef = doc(db, 'apps', appId);
       await updateDoc(appDocRef, {
         name: appName,
         description: appDescription,

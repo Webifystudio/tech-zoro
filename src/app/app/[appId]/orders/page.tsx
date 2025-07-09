@@ -1,20 +1,28 @@
 "use client";
 
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { collection, query, onSnapshot, orderBy, doc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import { format } from 'date-fns';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MoreHorizontal, FileText, Instagram, MessageCircle } from 'lucide-react';
+import { MoreHorizontal, FileText, Instagram, MessageCircle, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
-const mockOrders = [
-  { id: 'ORD001', customer: 'John Doe', platform: 'instagram', status: 'responded', date: '2023-10-26' },
-  { id: 'ORD002', customer: 'Jane Smith', platform: 'whatsapp', status: 'pending', date: '2023-10-25' },
-  { id: 'ORD003', customer: 'Sam Wilson', platform: 'instagram', status: 'responded', date: '2023-10-24' },
-  { id: 'ORD004', customer: 'Peter Pan', platform: 'whatsapp', status: 'pending', date: '2023-10-23' },
-  { id: 'ORD005', customer: 'Alice Wonderland', platform: 'instagram', status: 'pending', date: '2023-10-22' },
-];
+interface Order {
+    id: string;
+    customer: string;
+    platform: 'instagram' | 'whatsapp';
+    status: 'pending' | 'responded';
+    createdAt: Timestamp;
+}
 
 const platformIcons = {
     instagram: <Instagram className="h-4 w-4" />,
@@ -27,10 +35,76 @@ const statusVariant = {
 } as const;
 
 export default function OrdersPage() {
-  const renderTableRows = (statusFilter?: 'pending' | 'responded') => {
-      const orders = statusFilter ? mockOrders.filter(o => o.status === statusFilter) : mockOrders;
+  const params = useParams();
+  const appId = params.appId as string;
+  const { toast } = useToast();
+  const [user, setUser] = useState<User | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-      if (orders.length === 0) {
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user && db && appId) {
+      const q = query(collection(db, "apps", appId, "orders"), orderBy("createdAt", "desc"));
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const userOrders = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Order[];
+        setOrders(userOrders);
+        setIsLoading(false);
+      }, (error) => {
+        console.error("Error fetching orders:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not fetch orders." });
+        setIsLoading(false);
+      });
+      return () => unsubscribe();
+    } else if (!user) {
+        setIsLoading(false);
+    }
+  }, [user, appId, toast]);
+
+  const handleUpdateStatus = async (orderId: string, newStatus: 'pending' | 'responded') => {
+    if (!db) return;
+    const orderRef = doc(db, "apps", appId, "orders", orderId);
+    try {
+        await updateDoc(orderRef, { status: newStatus });
+        toast({ title: "Order Updated", description: `Order marked as ${newStatus}.` });
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Update Failed", description: error.message });
+    }
+  }
+
+  const handleDeleteOrder = async (orderId: string) => {
+      if (!db) return;
+      try {
+          await deleteDoc(doc(db, "apps", appId, "orders", orderId));
+          toast({ title: "Order Deleted" });
+      } catch (error: any) {
+          toast({ variant: "destructive", title: "Deletion Failed", description: error.message });
+      }
+  }
+
+  const renderTableRows = (statusFilter?: 'pending' | 'responded') => {
+      const filteredOrders = statusFilter ? orders.filter(o => o.status === statusFilter) : orders;
+
+      if (isLoading) {
+        return (
+            <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </TableCell>
+            </TableRow>
+        );
+      }
+
+      if (filteredOrders.length === 0) {
         return (
           <TableRow>
             <TableCell colSpan={6} className="h-24 text-center">
@@ -40,22 +114,22 @@ export default function OrdersPage() {
         );
       }
 
-      return orders.map((order) => (
+      return filteredOrders.map((order) => (
          <TableRow key={order.id}>
-            <TableCell className="font-medium">{order.id}</TableCell>
+            <TableCell className="font-medium">{order.id.substring(0,6)}...</TableCell>
             <TableCell>{order.customer}</TableCell>
             <TableCell>
-                <Badge variant="outline" className="flex items-center gap-2">
-                   {platformIcons[order.platform as keyof typeof platformIcons]}
+                <Badge variant="outline" className="flex items-center gap-2 max-w-min">
+                   {platformIcons[order.platform]}
                    <span className="capitalize">{order.platform}</span>
                 </Badge>
             </TableCell>
             <TableCell>
-                <Badge variant={statusVariant[order.status as keyof typeof statusVariant]}>
+                <Badge variant={statusVariant[order.status]}>
                     {order.status}
                 </Badge>
             </TableCell>
-            <TableCell>{order.date}</TableCell>
+            <TableCell>{order.createdAt ? format(order.createdAt.toDate(), 'PPP') : '...'}</TableCell>
             <TableCell className="text-right">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -66,10 +140,10 @@ export default function OrdersPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuItem>View Details</DropdownMenuItem>
-                    <DropdownMenuItem>Mark as Responded</DropdownMenuItem>
+                    {order.status === 'pending' && <DropdownMenuItem onClick={() => handleUpdateStatus(order.id, 'responded')}>Mark as Responded</DropdownMenuItem>}
+                    {order.status === 'responded' && <DropdownMenuItem onClick={() => handleUpdateStatus(order.id, 'pending')}>Mark as Pending</DropdownMenuItem>}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={() => handleDeleteOrder(order.id)}>Delete</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </TableCell>
@@ -97,7 +171,8 @@ export default function OrdersPage() {
             </Button>
         </div>
         <Card className="mt-4">
-            <TabsContent value="all">
+          <CardContent className="p-0">
+            <TabsContent value="all" className="m-0">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -114,7 +189,7 @@ export default function OrdersPage() {
                     </TableBody>
                 </Table>
             </TabsContent>
-            <TabsContent value="pending">
+            <TabsContent value="pending" className="m-0">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -131,7 +206,7 @@ export default function OrdersPage() {
                     </TableBody>
                 </Table>
             </TabsContent>
-            <TabsContent value="responded">
+            <TabsContent value="responded" className="m-0">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -148,6 +223,7 @@ export default function OrdersPage() {
                     </TableBody>
                 </Table>
             </TabsContent>
+            </CardContent>
         </Card>
       </Tabs>
     </div>
