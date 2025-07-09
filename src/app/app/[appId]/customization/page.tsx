@@ -1,27 +1,147 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, type ChangeEvent } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, Palette, Smartphone } from 'lucide-react';
+import { Upload, Palette, Smartphone, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { useParams } from 'next/navigation';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
+import { uploadImage } from '@/lib/imgbb';
+import { Skeleton } from '@/components/ui/skeleton';
+
+interface CustomizationSettings {
+  logoUrl: string | null;
+  coverUrl: string | null;
+  primaryColor: string;
+  fontFamily: string;
+}
 
 export default function CustomizationPage() {
+  const params = useParams();
+  const appId = params.appId as string;
+  const { toast } = useToast();
+
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [settings, setSettings] = useState<CustomizationSettings>({
+    logoUrl: null,
+    coverUrl: null,
+    primaryColor: '#34D399',
+    fontFamily: 'inter',
+  });
+
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string | null>>) => {
+  useEffect(() => {
+    onAuthStateChanged(auth, (currentUser) => setUser(currentUser));
+  }, []);
+
+  useEffect(() => {
+    if (user && db && appId) {
+      const fetchSettings = async () => {
+        setIsLoading(true);
+        const appDocRef = doc(db, 'apps', appId);
+        const appDocSnap = await getDoc(appDocRef);
+        if (appDocSnap.exists()) {
+          const appData = appDocSnap.data();
+          if (appData.customization) {
+            setSettings(appData.customization);
+            setLogoPreview(appData.customization.logoUrl);
+            setCoverPreview(appData.customization.coverUrl);
+          }
+        }
+        setIsLoading(false);
+      };
+      fetchSettings();
+    }
+  }, [user, appId]);
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>, type: 'logo' | 'cover') => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setter(URL.createObjectURL(file));
+      const previewUrl = URL.createObjectURL(file);
+      if (type === 'logo') {
+        setLogoFile(file);
+        setLogoPreview(previewUrl);
+      } else {
+        setCoverFile(file);
+        setCoverPreview(previewUrl);
+      }
     }
   };
+
+  const handleInputChange = (field: keyof CustomizationSettings, value: string) => {
+    setSettings(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveChanges = async () => {
+    if (!db || !appId) return;
+    setIsSaving(true);
+    try {
+      let updatedSettings = { ...settings };
+
+      if (logoFile) {
+        const formData = new FormData();
+        formData.append('image', logoFile);
+        const result = await uploadImage(formData);
+        if(result.url) updatedSettings.logoUrl = result.url;
+        else throw new Error('Logo upload failed');
+      }
+
+      if (coverFile) {
+        const formData = new FormData();
+        formData.append('image', coverFile);
+        const result = await uploadImage(formData);
+        if(result.url) updatedSettings.coverUrl = result.url;
+        else throw new Error('Cover upload failed');
+      }
+
+      const appDocRef = doc(db, 'apps', appId);
+      await updateDoc(appDocRef, { customization: updatedSettings });
+      setSettings(updatedSettings);
+      setLogoFile(null);
+      setCoverFile(null);
+      toast({ title: "Customization saved!" });
+
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: "Save failed", description: error.message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  if (isLoading) {
+      return (
+          <div className="space-y-8">
+              <Skeleton className="h-10 w-1/3" />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 space-y-8">
+                    <Skeleton className="h-64" />
+                    <Skeleton className="h-80" />
+                </div>
+                <div className="lg:col-span-1">
+                    <Skeleton className="h-[600px] sticky top-20" />
+                </div>
+              </div>
+          </div>
+      );
+  }
 
   return (
     <div className="space-y-8">
@@ -30,7 +150,7 @@ export default function CustomizationPage() {
         <p className="text-muted-foreground">Tailor the look and feel of your online store.</p>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         <div className="lg:col-span-2 space-y-8">
           <Card>
             <CardHeader>
@@ -40,7 +160,7 @@ export default function CustomizationPage() {
             <CardContent className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label>Store Logo</Label>
-                <input type="file" accept="image/*" ref={logoInputRef} onChange={(e) => handleFileChange(e, setLogoPreview)} className="hidden" />
+                <input type="file" accept="image/*" ref={logoInputRef} onChange={(e) => handleFileChange(e, 'logo')} className="hidden" />
                 <Card className="aspect-square border-dashed flex items-center justify-center" onClick={() => logoInputRef.current?.click()}>
                   {logoPreview ? (
                      <Image src={logoPreview} alt="Logo preview" width={200} height={200} className="w-full h-full object-contain rounded-md p-4" />
@@ -54,7 +174,7 @@ export default function CustomizationPage() {
               </div>
               <div className="space-y-2">
                 <Label>Cover Image</Label>
-                <input type="file" accept="image/*" ref={coverInputRef} onChange={(e) => handleFileChange(e, setCoverPreview)} className="hidden" />
+                <input type="file" accept="image/*" ref={coverInputRef} onChange={(e) => handleFileChange(e, 'cover')} className="hidden" />
                 <Card className="aspect-square border-dashed flex items-center justify-center" onClick={() => coverInputRef.current?.click()}>
                    {coverPreview ? (
                      <Image src={coverPreview} alt="Cover preview" width={200} height={200} className="w-full h-full object-cover rounded-md" />
@@ -78,14 +198,14 @@ export default function CustomizationPage() {
               <div className="space-y-4">
                 <Label>Primary Color</Label>
                 <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 rounded-md border" style={{ backgroundColor: 'hsl(var(--primary))' }}/>
-                    <Input defaultValue="#34D399" className="max-w-xs" />
+                    <div className="w-10 h-10 rounded-md border" style={{ backgroundColor: settings.primaryColor }}/>
+                    <Input value={settings.primaryColor} onChange={(e) => handleInputChange('primaryColor', e.target.value)} className="max-w-xs" />
                 </div>
               </div>
               <Separator />
                <div className="space-y-4">
                 <Label>Font Family</Label>
-                <Select defaultValue="inter">
+                <Select value={settings.fontFamily} onValueChange={(value) => handleInputChange('fontFamily', value)}>
                     <SelectTrigger className="max-w-xs">
                         <SelectValue placeholder="Select a font" />
                     </SelectTrigger>
@@ -97,9 +217,6 @@ export default function CustomizationPage() {
                 </Select>
               </div>
             </CardContent>
-            <CardFooter>
-                <Button>Save Changes</Button>
-            </CardFooter>
           </Card>
         </div>
 
@@ -128,6 +245,12 @@ export default function CustomizationPage() {
           </Card>
         </div>
       </div>
+       <div className="flex justify-end pt-8">
+            <Button onClick={handleSaveChanges} disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Changes
+            </Button>
+        </div>
     </div>
   );
 }
