@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, type FormEvent } from 'react';
@@ -14,7 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Star, Heart, ShoppingCart, Loader2 } from 'lucide-react';
+import { Star, Heart, ShoppingCart, Loader2, Trash2, Zap } from 'lucide-react';
 import { format } from 'date-fns';
 import { Label } from '@/components/ui/label';
 
@@ -57,6 +58,7 @@ export default function ProductDetailPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isInCart, setIsInCart] = useState(false);
 
   const [newReviewRating, setNewReviewRating] = useState(0);
   const [newReviewComment, setNewReviewComment] = useState('');
@@ -159,18 +161,41 @@ export default function ProductDetailPage() {
                 <p className="text-muted-foreground leading-relaxed">{product.description}</p>
                 <Separator />
                 <div className="flex items-center gap-4 mt-4">
-                    <Button size="lg" className="flex-1" onClick={() => {
-                        toast({
-                            title: "Added to Cart",
-                            description: `${product.name} has been added to your cart.`
-                        });
-                    }}>
-                    <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
-                    </Button>
+                    <div className="flex-1 flex flex-col sm:flex-row gap-4">
+                        {isInCart ? (
+                            <Button size="lg" variant="outline" className="w-full" onClick={() => {
+                                setIsInCart(false);
+                                toast({
+                                    title: "Removed from Cart",
+                                    description: `${product.name} has been removed from your cart.`
+                                });
+                            }}>
+                                <Trash2 className="mr-2 h-5 w-5" /> Remove from Cart
+                            </Button>
+                        ) : (
+                            <Button size="lg" className="w-full" onClick={() => {
+                                setIsInCart(true);
+                                toast({
+                                    title: "Added to Cart",
+                                    description: `${product.name} has been added to your cart.`
+                                });
+                            }}>
+                                <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
+                            </Button>
+                        )}
+                        <Button size="lg" className="w-full bg-primary/90 hover:bg-primary" onClick={() => {
+                            toast({
+                                title: "Proceeding to Checkout",
+                                description: `Get ready to purchase ${product.name}!`
+                            });
+                        }}>
+                            <Zap className="mr-2 h-5 w-5" /> Buy Now
+                        </Button>
+                    </div>
                     <Button
                         size="icon"
                         variant="outline"
-                        className="h-11 w-11"
+                        className="h-12 w-12"
                         onClick={() => {
                             const newWishlistedState = !isWishlisted;
                             setIsWishlisted(newWishlistedState);
