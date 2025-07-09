@@ -17,7 +17,8 @@ let auth: Auth | null = null;
 let googleProvider: GoogleAuthProvider | null = null;
 let isFirebaseConfigured = false;
 
-if (firebaseConfig.apiKey) {
+// We only want to initialize firebase on the client
+if (typeof window !== 'undefined' && firebaseConfig.apiKey) {
     try {
         app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
         auth = getAuth(app);
@@ -25,6 +26,7 @@ if (firebaseConfig.apiKey) {
         isFirebaseConfigured = true;
     } catch (e) {
         console.error('Failed to initialize Firebase', e);
+        // Set all to null and configured to false
         isFirebaseConfigured = false;
         app = null;
         auth = null;
