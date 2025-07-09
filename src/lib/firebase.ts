@@ -12,14 +12,24 @@ const firebaseConfig = {
   measurementId: "G-8L19QD2GKM"
 };
 
-const isFirebaseConfigured = !!firebaseConfig.apiKey;
-
 let app: FirebaseApp | null = null;
-if (isFirebaseConfigured) {
-  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-}
+let auth: Auth | null = null;
+let googleProvider: GoogleAuthProvider | null = null;
+let isFirebaseConfigured = false;
 
-const auth: Auth | null = app ? getAuth(app) : null;
-const googleProvider = app ? new GoogleAuthProvider() : null;
+if (firebaseConfig.apiKey) {
+    try {
+        app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+        auth = getAuth(app);
+        googleProvider = new GoogleAuthProvider();
+        isFirebaseConfigured = true;
+    } catch (e) {
+        console.error('Failed to initialize Firebase', e);
+        isFirebaseConfigured = false;
+        app = null;
+        auth = null;
+        googleProvider = null;
+    }
+}
 
 export { app, auth, googleProvider, isFirebaseConfigured };

@@ -43,7 +43,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!isFirebaseConfigured || !auth) {
-      setLoading(false);
+      router.push('/login');
       return;
     }
     
@@ -103,26 +103,6 @@ export default function Home() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!isFirebaseConfigured) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-4 bg-background">
-        <Card className="w-full max-w-md shadow-lg">
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-bold text-primary">Firebase Not Configured</CardTitle>
-            <CardDescription className="pt-2">
-              Please configure your Firebase credentials to enable authentication.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-center text-muted-foreground">
-              Create a <code>.env.local</code> file in the root of your project and add your Firebase credentials. See <code>src/lib/firebase.ts</code> for more details.
-            </p>
-          </CardContent>
-        </Card>
       </div>
     );
   }
