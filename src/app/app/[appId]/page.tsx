@@ -1,32 +1,31 @@
 "use client";
 
-import { Bar, BarChart, Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Activity, Users, DollarSign, ArrowUpRight } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Users, DollarSign, ShoppingCart, ListChecks } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
 
-const dailyUsersData = [
-  { date: 'Mon', users: 120 },
-  { date: 'Tue', users: 150 },
-  { date: 'Wed', users: 170 },
-  { date: 'Thu', users: 130 },
-  { date: 'Fri', users: 200 },
-  { date: 'Sat', users: 250 },
-  { date: 'Sun', users: 230 },
-];
+export default function AppDashboardPage() {
+  const params = useParams();
+  const appId = params.appId as string;
 
-const monthlyRevenueData = [
-  { month: 'Jan', revenue: 4000 },
-  { month: 'Feb', revenue: 3000 },
-  { month: 'Mar', revenue: 5000 },
-  { month: 'Apr', revenue: 4500 },
-  { month: 'May', revenue: 6000 },
-  { month: 'Jun', revenue: 5500 },
-];
-
-export default function AppDashboardPage({ params }: { params: { appId: string } }) {
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight">App Dashboard</h1>
+      <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Overview</h1>
+            <p className="text-muted-foreground">A quick summary of your app's performance.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button asChild>
+                <Link href={`/app/${appId}/products`}>Add Product</Link>
+            </Button>
+            <Button variant="outline" asChild>
+                <Link href={`/app/${appId}/settings`}>Settings</Link>
+            </Button>
+          </div>
+      </div>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -51,64 +50,37 @@ export default function AppDashboardPage({ params }: { params: { appId: string }
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Now</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">New Orders</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+573</div>
-            <p className="text-xs text-muted-foreground">+201 since last hour</p>
+            <div className="text-2xl font-bold">+12</div>
+            <p className="text-xs text-muted-foreground">+5 since yesterday</p>
           </CardContent>
         </Card>
          <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Pending Inquiries</CardTitle>
+            <ListChecks className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12.5%</div>
-            <p className="text-xs text-muted-foreground">+2.5% from last week</p>
+            <div className="text-2xl font-bold">3</div>
+            <p className="text-xs text-muted-foreground">Respond to them in the orders tab</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-2">
-        <Card>
+      <Card>
           <CardHeader>
-            <CardTitle>Daily Active Users</CardTitle>
-            <CardDescription>Users active on your app over the last 7 days.</CardDescription>
+            <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={dailyUsersData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="users" stroke="hsl(var(--primary))" activeDot={{ r: 8 }} />
-              </LineChart>
-            </ResponsiveContainer>
+          <CardContent className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <Button variant="outline" asChild><Link href={`/app/${appId}/customization`}>Customize Store</Link></Button>
+              <Button variant="outline" asChild><Link href={`/app/${appId}/marketing`}>Create Promotion</Link></Button>
+              <Button variant="outline" asChild><Link href={`/app/${appId}/orders`}>View Orders</Link></Button>
+              <Button variant="outline" asChild><Link href={`/app/${appId}/team`}>Invite Team Member</Link></Button>
           </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Monthly Revenue</CardTitle>
-            <CardDescription>Revenue generated over the last 6 months.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={monthlyRevenueData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+      </Card>
     </div>
   );
 }
