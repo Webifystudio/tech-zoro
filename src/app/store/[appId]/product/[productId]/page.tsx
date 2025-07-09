@@ -159,17 +159,26 @@ export default function ProductDetailPage() {
                 <p className="text-muted-foreground leading-relaxed">{product.description}</p>
                 <Separator />
                 <div className="flex items-center gap-4 mt-4">
-                    <Button size="lg" className="flex-1">
+                    <Button size="lg" className="flex-1" onClick={() => {
+                        toast({
+                            title: "Added to Cart",
+                            description: `${product.name} has been added to your cart.`
+                        });
+                    }}>
                     <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
                     </Button>
                     <Button
-                    size="icon"
-                    variant="outline"
-                    className="h-11 w-11"
-                    onClick={() => setIsWishlisted(!isWishlisted)}
-                    aria-label="Add to wishlist"
+                        size="icon"
+                        variant="outline"
+                        className="h-11 w-11"
+                        onClick={() => {
+                            const newWishlistedState = !isWishlisted;
+                            setIsWishlisted(newWishlistedState);
+                            toast({ title: newWishlistedState ? 'Added to wishlist!' : 'Removed from wishlist.' });
+                        }}
+                        aria-label="Add to wishlist"
                     >
-                    <Heart className={cn('h-5 w-5', isWishlisted ? 'text-red-500 fill-red-500' : 'text-muted-foreground')} />
+                        <Heart className={cn('h-5 w-5', isWishlisted ? 'text-red-500 fill-red-500' : 'text-muted-foreground')} />
                     </Button>
                 </div>
                 </div>
