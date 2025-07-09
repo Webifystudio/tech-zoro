@@ -1,7 +1,7 @@
 "use client";
 
-import type { ChangeEvent, FormEvent } from 'react';
-import { useState, useRef, useEffect } from 'react';
+import type { FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Copy } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AppSettingsPage() {
@@ -28,6 +28,13 @@ export default function AppSettingsPage() {
   
   const [appName, setAppName] = useState('');
   const [appDescription, setAppDescription] = useState('');
+  const [publicUrl, setPublicUrl] = useState('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && appId) {
+      setPublicUrl(`${window.location.origin}/store/${appId}`);
+    }
+  }, [appId]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -99,6 +106,15 @@ export default function AppSettingsPage() {
     }
   };
 
+  const handleCopyLink = () => {
+    if (!publicUrl) return;
+    navigator.clipboard.writeText(publicUrl);
+    toast({
+      title: 'Link Copied!',
+      description: 'Your public store URL is now on your clipboard.',
+    });
+  };
+
   if (isLoading || !user) {
     return (
       <div className="space-y-8">
@@ -136,39 +152,59 @@ export default function AppSettingsPage() {
           <p className="text-muted-foreground">Manage your application's configuration and public details.</p>
       </div>
 
-      <Card>
-        <form onSubmit={handleSaveChanges}>
-          <CardHeader>
-            <CardTitle>General Settings</CardTitle>
-            <CardDescription>Update your app's public information.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="appName">Website Name</Label>
-              <Input
-                id="appName"
-                value={appName}
-                onChange={(e) => setAppName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="appDescription">Website Description</Label>
-              <Textarea
-                id="appDescription"
-                value={appDescription}
-                onChange={(e) => setAppDescription(e.target.value)}
-                placeholder="Tell us about your website"
-              />
-            </div>
-          </CardContent>
-          <CardFooter className="border-t px-6 py-4">
-            <Button type="submit" disabled={isSaving}>
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
+      <div className="grid gap-8 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Card>
+            <form onSubmit={handleSaveChanges}>
+              <CardHeader>
+                <CardTitle>General Settings</CardTitle>
+                <CardDescription>Update your app's public information.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="appName">Website Name</Label>
+                  <Input
+                    id="appName"
+                    value={appName}
+                    onChange={(e) => setAppName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="appDescription">Website Description</Label>
+                  <Textarea
+                    id="appDescription"
+                    value={appDescription}
+                    onChange={(e) => setAppDescription(e.target.value)}
+                    placeholder="Tell us about your website"
+                  />
+                </div>
+              </CardContent>
+              <CardFooter className="border-t px-6 py-4">
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Changes
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
+        </div>
+        <div className="lg:col-span-1 space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Share Your Store</CardTitle>
+              <CardDescription>This is the public link to your storefront.</CardDescription>
+            </CardHeader>
+            <CardContent>
+               <div className="flex gap-2">
+                <Input value={publicUrl} readOnly />
+                <Button variant="outline" size="icon" onClick={handleCopyLink} aria-label="Copy public URL">
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
