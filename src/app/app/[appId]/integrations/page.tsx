@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, type FormEvent } from 'react';
@@ -15,7 +16,7 @@ import { Instagram, MessageCircle, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface IntegrationSettings {
-  instagramUsername: string;
+  instagramProfileUrl: string;
   whatsappNumber: string;
 }
 
@@ -28,7 +29,7 @@ export default function IntegrationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [settings, setSettings] = useState<Partial<IntegrationSettings>>({
-    instagramUsername: '',
+    instagramProfileUrl: '',
     whatsappNumber: '',
   });
 
@@ -111,12 +112,12 @@ export default function IntegrationsPage() {
                   <Instagram className="h-6 w-6" />
                   <CardTitle>Instagram</CardTitle>
               </div>
-              <CardDescription>Connect your Instagram account to display your feed.</CardDescription>
+              <CardDescription>Link to your Instagram profile.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                  <Label htmlFor="ig-username">Instagram Username</Label>
-                  <Input id="ig-username" placeholder="@your-username" value={settings.instagramUsername} onChange={(e) => handleInputChange('instagramUsername', e.target.value)} />
+                  <Label htmlFor="ig-profile-url">Instagram Profile URL</Label>
+                  <Input id="ig-profile-url" placeholder="https://instagram.com/your-username" value={settings.instagramProfileUrl} onChange={(e) => handleInputChange('instagramProfileUrl', e.target.value)} />
               </div>
             </CardContent>
           </Card>

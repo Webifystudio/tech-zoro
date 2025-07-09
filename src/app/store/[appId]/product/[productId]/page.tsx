@@ -16,9 +16,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Star, Heart, ShoppingCart, Loader2, Trash2, Zap, Tag } from 'lucide-react';
+import { Star, Heart, ShoppingCart, Loader2, Trash2, Zap } from 'lucide-react';
 import { format, isPast } from 'date-fns';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 
 interface Product {
   id: string;
@@ -26,6 +27,13 @@ interface Product {
   description: string;
   price: number;
   imageUrl: string;
+  platform: 'instagram' | 'whatsapp';
+  instagramPostUrl?: string;
+}
+
+interface AppIntegrations {
+    whatsappNumber?: string;
+    instagramProfileUrl?: string;
 }
 
 interface Review {
@@ -67,6 +75,7 @@ export default function ProductDetailPage() {
 
   const [user, setUser] = useState<User | null>(null);
   const [product, setProduct] = useState<Product | null>(null);
+  const [appIntegrations, setAppIntegrations] = useState<AppIntegrations | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -81,6 +90,8 @@ export default function ProductDetailPage() {
   const [finalPrice, setFinalPrice] = useState<number | null>(null);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
+  
+  const [isRedirectDialogOpen, setIsRedirectDialogOpen] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => setUser(currentUser));
@@ -96,14 +107,27 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (!appId || !productId || !db) return;
     
-    const fetchProduct = async () => {
+    const fetchProductAndApp = async () => {
       setIsLoading(true);
       const productRef = doc(db, 'apps', appId, 'products', productId);
-      const productSnap = await getDoc(productRef);
-      if (productSnap.exists()) {
-        setProduct({ id: productSnap.id, ...productSnap.data() } as Product);
+      const appRef = doc(db, 'apps', appId);
+      
+      try {
+        const productSnap = await getDoc(productRef);
+        if (productSnap.exists()) {
+          setProduct({ id: productSnap.id, ...productSnap.data() } as Product);
+        }
+
+        const appSnap = await getDoc(appRef);
+        if (appSnap.exists()) {
+          setAppIntegrations(appSnap.data().integrations || {});
+        }
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not load product details.' });
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     const subscribeToReviews = () => {
@@ -114,11 +138,11 @@ export default function ProductDetailPage() {
       return unsubscribe;
     };
 
-    fetchProduct();
+    fetchProductAndApp();
     const unsubReviews = subscribeToReviews();
 
     return () => unsubReviews();
-  }, [appId, productId]);
+  }, [appId, productId, toast]);
   
   const handleApplyCoupon = async () => {
     if (!couponCode.trim() || !product) return;
@@ -210,6 +234,24 @@ export default function ProductDetailPage() {
     }
   };
 
+  const handleRedirect = () => {
+    if (!product) return;
+    let url = '';
+    if (product.platform === 'whatsapp' && appIntegrations?.whatsappNumber) {
+        const message = encodeURIComponent(`I want to buy this ${product.name} (Product ID: ${product.id})`);
+        url = `https://wa.me/${appIntegrations.whatsappNumber}?text=${message}`;
+    } else if (product.platform === 'instagram' && product.instagramPostUrl) {
+        url = product.instagramPostUrl;
+    }
+    
+    if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not determine the redirect URL.' });
+    }
+    setIsRedirectDialogOpen(false);
+  };
+
   if (isLoading) {
     return <div className="flex justify-center items-center h-[60vh]"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div>;
   }
@@ -220,6 +262,28 @@ export default function ProductDetailPage() {
 
   return (
     <div className="bg-background">
+        <Dialog open={isRedirectDialogOpen} onOpenChange={setIsRedirectDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Redirection</DialogTitle>
+              <DialogDescription className="py-4 text-base text-foreground/80 leading-relaxed">
+                Please read this and confirm for redirection automated by Zoro.
+                This platform does not contain any payment option like Amazon, Flipkart, etc., to avoid scams.
+                By continuing, you will be redirected to the seller's page where you can message them, send a screenshot of the product, and complete your deal.
+                <br/><br/>
+                Thanks for using our services!
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Cancel</Button>
+              </DialogClose>
+              <Button type="button" onClick={handleRedirect}>Confirm & Redirect</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="grid md:grid-cols-2 gap-8 lg:gap-16">
                 <div>
@@ -302,12 +366,7 @@ export default function ProductDetailPage() {
                                 <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
                             </Button>
                         )}
-                        <Button size="lg" className="w-full bg-primary/90 hover:bg-primary" onClick={() => {
-                            toast({
-                                title: "Proceeding to Checkout",
-                                description: `Get ready to purchase ${product.name}!`
-                            });
-                        }}>
+                        <Button size="lg" className="w-full bg-primary/90 hover:bg-primary" onClick={() => setIsRedirectDialogOpen(true)}>
                             <Zap className="mr-2 h-5 w-5" /> Buy Now
                         </Button>
                     </div>

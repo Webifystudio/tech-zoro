@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ChangeEvent, FormEvent } from 'react';
@@ -26,6 +27,7 @@ interface Product {
   price: number;
   imageUrl: string;
   platform: 'instagram' | 'whatsapp';
+  instagramPostUrl?: string;
   createdAt: { seconds: number; nanoseconds: number; } | null;
 }
 
@@ -49,6 +51,7 @@ export default function ProductsPage() {
   const [productDesc, setProductDesc] = useState('');
   const [productPrice, setProductPrice] = useState('');
   const [productPlatform, setProductPlatform] = useState('');
+  const [instagramPostUrl, setInstagramPostUrl] = useState('');
   const [productImageFile, setProductImageFile] = useState<File | null>(null);
   const [productImagePreview, setProductImagePreview] = useState<string | null>(null);
   const productImageInputRef = useRef<HTMLInputElement>(null);
@@ -91,13 +94,14 @@ export default function ProductsPage() {
       setProductDesc('');
       setProductPrice('');
       setProductPlatform('');
+      setInstagramPostUrl('');
       setProductImageFile(null);
       setProductImagePreview(null);
   }
 
   const handleCreateProduct = async (e: FormEvent) => {
     e.preventDefault();
-    if (!productName.trim() || !productPrice || !productImageFile || !productPlatform || !user || !db) {
+    if (!productName.trim() || !productPrice || !productImageFile || !productPlatform || !user || !db || (productPlatform === 'instagram' && !instagramPostUrl)) {
         toast({ variant: "destructive", title: "Missing fields", description: "Please fill out all required fields." });
         return;
     }
@@ -114,14 +118,20 @@ export default function ProductsPage() {
         throw new Error(result.error || 'Product image upload failed');
       }
 
-      await addDoc(collection(db, "apps", appId, "products"), {
+      const newProduct: any = {
         name: productName.trim(),
         description: productDesc.trim(),
         price: parseFloat(productPrice),
         platform: productPlatform,
         imageUrl: imageUrl,
         createdAt: serverTimestamp(),
-      });
+      };
+
+      if (productPlatform === 'instagram') {
+        newProduct.instagramPostUrl = instagramPostUrl;
+      }
+
+      await addDoc(collection(db, "apps", appId, "products"), newProduct);
 
       resetForm();
       setIsDialogOpen(false);
@@ -191,6 +201,12 @@ export default function ProductsPage() {
                             </Select>
                         </div>
                    </div>
+                   {productPlatform === 'instagram' && (
+                     <div className="space-y-2">
+                       <Label htmlFor="instagramPostUrl">Instagram Post URL</Label>
+                       <Input id="instagramPostUrl" placeholder="https://instagram.com/p/..." value={instagramPostUrl} onChange={(e) => setInstagramPostUrl(e.target.value)} required />
+                     </div>
+                   )}
                 </div>
                 <div className="space-y-2">
                   <Label>Product Image</Label>
