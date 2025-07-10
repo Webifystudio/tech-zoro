@@ -21,6 +21,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
 
 interface Product {
   id: string;
@@ -69,7 +71,6 @@ export default function OrdersPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   
-  // Form state for new order
   const [newOrderProduct, setNewOrderProduct] = useState('');
   const [newOrderCustomer, setNewOrderCustomer] = useState('');
   const [newOrderContact, setNewOrderContact] = useState('');
@@ -302,7 +303,7 @@ export default function OrdersPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Orders & Inquiries</h1>
           <p className="text-muted-foreground">Manage and track all customer orders and inquiries.</p>
@@ -318,7 +319,8 @@ export default function OrdersPage() {
                         <DialogDescription>Add an order that was placed outside of the storefront.</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleCreateOrder}>
-                        <div className="grid gap-4 py-4">
+                      <ScrollArea className="max-h-[70vh] p-1">
+                        <div className="grid gap-4 py-4 px-2">
                             <div className="space-y-2">
                                 <Label htmlFor="product">Product</Label>
                                 <Popover>
@@ -385,7 +387,8 @@ export default function OrdersPage() {
                                 </Select>
                             </div>
                         </div>
-                        <DialogFooter>
+                        </ScrollArea>
+                        <DialogFooter className="pt-4 pr-4">
                             <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
                             <Button type="submit" disabled={isCreating}>
                                 {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -403,14 +406,14 @@ export default function OrdersPage() {
       </div>
 
       <Tabs defaultValue="all">
-        <div className="flex items-center justify-between">
-            <TabsList className="flex-wrap h-auto">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <TabsList className="flex-wrap h-auto self-start">
                 <TabsTrigger value="all">All</TabsTrigger>
                 {allTabs.map(tab => (
                   <TabsTrigger key={tab} value={tab} className="capitalize">{tab}</TabsTrigger>
                 ))}
             </TabsList>
-             <div className="relative w-full max-w-sm">
+             <div className="relative w-full sm:max-w-sm self-end sm:self-center">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                   placeholder="Search by customer name..."
@@ -423,21 +426,25 @@ export default function OrdersPage() {
         <Card className="mt-4">
           <CardContent className="p-0">
             <TabsContent value="all" className="m-0">
+              <div className="overflow-x-auto">
                 <Table>
                     <THead />
                     <TableBody>
                         {renderTableRows()}
                     </TableBody>
                 </Table>
+              </div>
             </TabsContent>
             {allTabs.map(tab => (
               <TabsContent key={tab} value={tab} className="m-0">
-                  <Table>
-                      <THead />
-                      <TableBody>
-                          {renderTableRows(tab)}
-                      </TableBody>
-                  </Table>
+                  <div className="overflow-x-auto">
+                    <Table>
+                        <THead />
+                        <TableBody>
+                            {renderTableRows(tab)}
+                        </TableBody>
+                    </Table>
+                  </div>
               </TabsContent>
             ))}
             </CardContent>

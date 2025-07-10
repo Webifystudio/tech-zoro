@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, PlusCircle, Trash2, Upload, Instagram, MessageCircle, ShoppingBag } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Product {
   id: string;
@@ -177,7 +178,8 @@ export default function ProductsPage() {
               <DialogDescription>Fill in the details for your new product.</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateProduct}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+              <ScrollArea className="max-h-[70vh] p-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="productName">Product Name</Label>
@@ -241,7 +243,8 @@ export default function ProductsPage() {
                   </Card>
                 </div>
               </div>
-              <DialogFooter>
+              </ScrollArea>
+              <DialogFooter className="pt-4 pr-4">
                 <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
                 <Button type="submit" disabled={isCreating}>
                   {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

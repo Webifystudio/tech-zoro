@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect, type ChangeEvent } from 'react';
@@ -220,8 +221,8 @@ export default function CustomizationPage() {
           </Card>
         </div>
 
-        <div className="lg:col-span-1">
-          <Card className="sticky top-20">
+        <div className="lg:col-span-1 lg:sticky top-20">
+          <Card>
             <CardHeader className="flex flex-row items-center gap-2">
                 <Smartphone />
                 <CardTitle>Store Preview</CardTitle>
