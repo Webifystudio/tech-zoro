@@ -1,14 +1,15 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { collection, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowRight, MessageCircle, Instagram } from 'lucide-react';
+import { ArrowRight, MessageCircle, Instagram, PackageX } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface Product {
@@ -17,6 +18,7 @@ interface Product {
   description: string;
   price: number;
   imageUrl: string;
+  quantity: number | null;
   platform: 'instagram' | 'whatsapp';
 }
 
@@ -116,7 +118,7 @@ export default function StorefrontPage() {
     <>
       <section className="relative w-full h-80 md:h-96 bg-muted/40 flex items-center justify-center text-center p-4">
           {appData?.customization?.coverUrl && (
-              <Image src={appData.customization.coverUrl} layout="fill" objectFit="cover" alt="Store banner" className="opacity-30" />
+              <Image src={appData.customization.coverUrl} layout="fill" objectFit="cover" alt="Store banner" className="opacity-30" data-ai-hint="website banner" />
           )}
           <div className="relative z-10 max-w-2xl">
               <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-foreground">{appData?.name || 'Welcome to Our Store'}</h1>
@@ -156,30 +158,39 @@ export default function StorefrontPage() {
           </div>
           {productsToShow.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {productsToShow.map(product => (
-                <Link key={product.id} href={`/store/${appId}/product/${product.id}`} className="block">
-                  <div className="bg-background rounded-lg border overflow-hidden flex flex-col group transition-all hover:shadow-xl hover:-translate-y-1 h-full">
-                    <div className="relative h-56 w-full overflow-hidden">
-                      <Image src={product.imageUrl} layout="fill" objectFit="cover" alt={product.name} className="group-hover:scale-105 transition-transform duration-300"/>
-                    </div>
-                    <div className="p-4 flex-grow flex flex-col">
-                      <h3 className="font-semibold text-lg truncate">{product.name}</h3>
-                      <p className="text-muted-foreground text-sm mt-1 flex-grow">{product.description}</p>
-                      <div className="flex items-center justify-between mt-4">
-                        <p className="font-bold text-xl text-primary">${product.price.toFixed(2)}</p>
-                        <Badge variant="outline" className="capitalize">
-                            {product.platform === 'whatsapp' ? <MessageCircle className="h-4 w-4 mr-1.5"/> : <Instagram className="h-4 w-4 mr-1.5"/>}
-                            {product.platform}
-                        </Badge>
+              {productsToShow.map(product => {
+                const isOutOfStock = product.quantity !== null && product.quantity <= 0;
+                return (
+                  <Link key={product.id} href={`/store/${appId}/product/${product.id}`} className="block">
+                    <div className="bg-background rounded-lg border overflow-hidden flex flex-col group transition-all hover:shadow-xl hover:-translate-y-1 h-full">
+                      <div className="relative h-56 w-full overflow-hidden">
+                        <Image src={product.imageUrl} layout="fill" objectFit="cover" alt={product.name} className="group-hover:scale-105 transition-transform duration-300"/>
+                         {isOutOfStock && (
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                <Badge variant="destructive" className="text-base px-4 py-2">Out of Stock</Badge>
+                            </div>
+                        )}
+                      </div>
+                      <div className="p-4 flex-grow flex flex-col">
+                        <h3 className="font-semibold text-lg truncate">{product.name}</h3>
+                        <p className="text-muted-foreground text-sm mt-1 flex-grow">{product.description}</p>
+                        <div className="flex items-center justify-between mt-4">
+                          <p className="font-bold text-xl text-primary">${product.price.toFixed(2)}</p>
+                          <Badge variant="outline" className="capitalize">
+                              {product.platform === 'whatsapp' ? <MessageCircle className="h-4 w-4 mr-1.5"/> : <Instagram className="h-4 w-4 mr-1.5"/>}
+                              {product.platform}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                )
+              })}
             </div>
           ) : (
-            <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                <h3 className="text-xl font-semibold">{searchParams.get('search') ? 'No Products Found' : 'No Products Yet'}</h3>
+            <div className="text-center py-12 border-2 border-dashed rounded-lg flex flex-col items-center">
+                <PackageX className="h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-xl font-semibold">{searchParams.get('search') ? 'No Products Found' : 'No Products Yet'}</h3>
                 <p className="mt-1 text-muted-foreground">{searchParams.get('search') ? 'Try a different search term.' : 'Products added in the dashboard will appear here.'}</p>
             </div>
           )}

@@ -1,7 +1,8 @@
+
 "use client";
 
 import { Sidebar, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarContent } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, Globe, LayoutGrid, ShoppingBag, BarChart3, Megaphone, Palette, Wrench, Users2, ClipboardList, Share2 } from 'lucide-react';
+import { LayoutDashboard, Settings, Globe, LayoutGrid, ShoppingBag, BarChart3, Megaphone, Palette, Wrench, Users2, ClipboardList, Share2, PackageX } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
 
@@ -15,6 +16,7 @@ export function AppSidebar() {
     { href: `/app/${appId}/storefront`, label: 'Storefront', icon: Globe },
     { href: `/app/${appId}/orders`, label: 'Orders', icon: ClipboardList },
     { href: `/app/${appId}/products`, label: 'Products', icon: ShoppingBag },
+    { href: `/app/${appId}/out-of-stock`, label: 'Out of Stock', icon: PackageX },
     { href: `/app/${appId}/categories`, label: 'Categories', icon: LayoutGrid },
     { href: `/app/${appId}/analytics`, label: 'Analytics', icon: BarChart3 },
     { href: `/app/${appId}/marketing`, label: 'Marketing', icon: Megaphone },

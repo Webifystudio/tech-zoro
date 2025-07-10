@@ -1,10 +1,10 @@
 
 "use client";
 
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { collection, query, onSnapshot, orderBy, doc, updateDoc, deleteDoc, Timestamp, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, doc, updateDoc, deleteDoc, Timestamp, addDoc, serverTimestamp, writeBatch, where, getDoc, runTransaction } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { format } from 'date-fns';
 
@@ -15,16 +15,18 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
-import { MoreHorizontal, FileText, Instagram, MessageCircle, Loader2, PlusCircle, Package } from 'lucide-react';
+import { MoreHorizontal, FileText, Instagram, MessageCircle, Loader2, PlusCircle, Package, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface Product {
   id: string;
   name: string;
   price: number;
+  quantity: number | null;
 }
 
 interface Order {
@@ -35,6 +37,7 @@ interface Order {
     status: 'pending' | 'responded' | 'completed' | 'shipped' | 'cancelled';
     productName: string;
     productId: string;
+    quantity: number;
     price: number;
     createdAt: Timestamp;
 }
@@ -71,6 +74,13 @@ export default function OrdersPage() {
   const [newOrderCustomer, setNewOrderCustomer] = useState('');
   const [newOrderContact, setNewOrderContact] = useState('');
   const [newOrderPrice, setNewOrderPrice] = useState('');
+  const [newOrderQuantity, setNewOrderQuantity] = useState('1');
+  const [newOrderStatus, setNewOrderStatus] = useState<Order['status']>('completed');
+  
+  const [productSearch, setProductSearch] = useState('');
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -95,7 +105,7 @@ export default function OrdersPage() {
         setIsLoading(false);
       });
       
-      const productsQuery = query(collection(db, "apps", appId, "products"));
+      const productsQuery = query(collection(db, "apps", appId, "products"), where("quantity", "!=", 0));
       const unsubProducts = onSnapshot(productsQuery, (snapshot) => {
           setProducts(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as Product)))
       });
@@ -108,6 +118,18 @@ export default function OrdersPage() {
         setIsLoading(false);
     }
   }, [user, appId, toast]);
+
+  useEffect(() => {
+    if (productSearch) {
+        setFilteredProducts(products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())));
+    } else {
+        setFilteredProducts(products);
+    }
+  }, [productSearch, products]);
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => order.customer.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [orders, searchTerm]);
 
   const handleUpdateStatus = async (orderId: string, newStatus: Order['status']) => {
     if (!db) return;
@@ -125,39 +147,61 @@ export default function OrdersPage() {
     setNewOrderCustomer('');
     setNewOrderContact('');
     setNewOrderPrice('');
+    setNewOrderQuantity('1');
+    setNewOrderStatus('completed');
+    setProductSearch('');
   };
 
   const handleCreateOrder = async (e: FormEvent) => {
-      e.preventDefault();
-      if (!newOrderProduct || !newOrderCustomer || !newOrderPrice || !db) {
-          toast({variant: 'destructive', title: 'Missing fields', description: 'Please fill out all required fields.'});
-          return;
-      }
-      setIsCreating(true);
-      try {
-          const selectedProduct = products.find(p => p.id === newOrderProduct);
-          if (!selectedProduct) throw new Error("Selected product not found.");
+    e.preventDefault();
+    if (!newOrderProduct || !newOrderCustomer || !newOrderPrice || !db) {
+        toast({variant: 'destructive', title: 'Missing fields', description: 'Please fill out all required fields.'});
+        return;
+    }
+    setIsCreating(true);
+    try {
+      const selectedProduct = products.find(p => p.id === newOrderProduct);
+      if (!selectedProduct) throw new Error("Selected product not found.");
 
-          await addDoc(collection(db, "apps", appId, "orders"), {
-              productId: selectedProduct.id,
-              productName: selectedProduct.name,
-              customer: newOrderCustomer,
-              contact: newOrderContact,
-              price: parseFloat(newOrderPrice),
-              platform: 'manual',
-              status: 'completed',
-              createdAt: serverTimestamp(),
-          });
-          toast({ title: "Order Created", description: `A new order has been created.` });
-          resetForm();
-          setIsDialogOpen(false);
-      } catch (error: any) {
-          toast({ variant: "destructive", title: "Failed to create order", description: error.message });
-      } finally {
-          setIsCreating(false);
-      }
+      const productRef = doc(db, 'apps', appId, 'products', selectedProduct.id);
+      const quantityPurchased = parseInt(newOrderQuantity, 10);
+      
+      await runTransaction(db, async (transaction) => {
+        const productDoc = await transaction.get(productRef);
+        if (!productDoc.exists()) throw new Error("Product does not exist!");
+        
+        const currentQuantity = productDoc.data().quantity;
+        if (currentQuantity !== null && currentQuantity < quantityPurchased) {
+          throw new Error("Not enough stock available.");
+        }
+
+        if (currentQuantity !== null) {
+          transaction.update(productRef, { quantity: currentQuantity - quantityPurchased });
+        }
+        
+        const orderRef = doc(collection(db, 'apps', appId, 'orders'));
+        transaction.set(orderRef, {
+            productId: selectedProduct.id,
+            productName: selectedProduct.name,
+            customer: newOrderCustomer,
+            contact: newOrderContact,
+            price: parseFloat(newOrderPrice) * quantityPurchased,
+            quantity: quantityPurchased,
+            platform: 'manual',
+            status: newOrderStatus,
+            createdAt: serverTimestamp(),
+        });
+      });
+
+      toast({ title: "Order Created", description: `A new order has been created.` });
+      resetForm();
+      setIsDialogOpen(false);
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Failed to create order", description: error.message });
+    } finally {
+        setIsCreating(false);
+    }
   }
-
 
   const handleDeleteOrder = async (orderId: string) => {
       if (!db) return;
@@ -170,33 +214,37 @@ export default function OrdersPage() {
   }
 
   const renderTableRows = (statusFilter?: Order['status']) => {
-      const filteredOrders = statusFilter ? orders.filter(o => o.status === statusFilter) : orders;
+      let ordersToRender = filteredOrders;
+      if (statusFilter) {
+          ordersToRender = ordersToRender.filter(o => o.status === statusFilter);
+      }
 
       if (isLoading) {
         return (
             <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </TableCell>
             </TableRow>
         );
       }
 
-      if (filteredOrders.length === 0) {
+      if (ordersToRender.length === 0) {
         return (
           <TableRow>
-            <TableCell colSpan={7} className="h-24 text-center">
+            <TableCell colSpan={8} className="h-24 text-center">
               No orders found.
             </TableCell>
           </TableRow>
         );
       }
 
-      return filteredOrders.map((order) => (
+      return ordersToRender.map((order) => (
          <TableRow key={order.id}>
             <TableCell className="font-medium">{order.id.substring(0,6)}...</TableCell>
             <TableCell className="font-medium">{order.productName}</TableCell>
             <TableCell>{order.customer}</TableCell>
+            <TableCell>{order.quantity}</TableCell>
             <TableCell>${order.price.toFixed(2)}</TableCell>
             <TableCell>
                 <Badge variant="outline" className="flex items-center gap-2 max-w-min">
@@ -240,6 +288,7 @@ export default function OrdersPage() {
             <TableHead>Order ID</TableHead>
             <TableHead>Product</TableHead>
             <TableHead>Customer</TableHead>
+            <TableHead>Qty</TableHead>
             <TableHead>Price</TableHead>
             <TableHead>Platform</TableHead>
             <TableHead>Status</TableHead>
@@ -272,18 +321,37 @@ export default function OrdersPage() {
                         <div className="grid gap-4 py-4">
                             <div className="space-y-2">
                                 <Label htmlFor="product">Product</Label>
-                                <Select onValueChange={(value) => {
-                                    setNewOrderProduct(value);
-                                    const price = products.find(p => p.id === value)?.price.toString() || '';
-                                    setNewOrderPrice(price);
-                                }} value={newOrderProduct} required>
-                                    <SelectTrigger id="product"><SelectValue placeholder="Select a product" /></SelectTrigger>
-                                    <SelectContent>
-                                        {products.map(p => (
-                                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className="w-full justify-start">
+                                            {newOrderProduct ? products.find(p => p.id === newOrderProduct)?.name : "Select a product"}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                        <Input 
+                                            placeholder="Search products..." 
+                                            className="m-2 w-[calc(100%-1rem)]"
+                                            value={productSearch}
+                                            onChange={(e) => setProductSearch(e.target.value)}
+                                        />
+                                        <div className="max-h-48 overflow-y-auto">
+                                        {filteredProducts.map(p => (
+                                            <Button
+                                                key={p.id}
+                                                variant="ghost"
+                                                className="w-full justify-start"
+                                                onClick={() => {
+                                                    setNewOrderProduct(p.id);
+                                                    const price = p.price.toString() || '';
+                                                    setNewOrderPrice(price);
+                                                }}
+                                            >
+                                                {p.name}
+                                            </Button>
                                         ))}
-                                    </SelectContent>
-                                </Select>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="customer">Customer Name</Label>
@@ -293,9 +361,28 @@ export default function OrdersPage() {
                                 <Label htmlFor="contact">Customer Contact (Email/Phone)</Label>
                                 <Input id="contact" value={newOrderContact} onChange={e => setNewOrderContact(e.target.value)} />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="price">Selling Price</Label>
-                                <Input id="price" type="number" value={newOrderPrice} onChange={e => setNewOrderPrice(e.target.value)} required />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="quantity">Quantity</Label>
+                                    <Input id="quantity" type="number" min="1" value={newOrderQuantity} onChange={e => setNewOrderQuantity(e.target.value)} required />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="price">Selling Price (per item)</Label>
+                                    <Input id="price" type="number" value={newOrderPrice} onChange={e => setNewOrderPrice(e.target.value)} required />
+                                </div>
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="status">Status</Label>
+                                <Select onValueChange={(v) => setNewOrderStatus(v as any)} value={newOrderStatus} required>
+                                    <SelectTrigger id="status"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="pending">Pending</SelectItem>
+                                        <SelectItem value="responded">Responded</SelectItem>
+                                        <SelectItem value="completed">Completed</SelectItem>
+                                        <SelectItem value="shipped">Shipped</SelectItem>
+                                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </div>
                         <DialogFooter>
@@ -323,6 +410,15 @@ export default function OrdersPage() {
                   <TabsTrigger key={tab} value={tab} className="capitalize">{tab}</TabsTrigger>
                 ))}
             </TabsList>
+             <div className="relative w-full max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                  placeholder="Search by customer name..."
+                  className="w-full pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
         </div>
         <Card className="mt-4">
           <CardContent className="p-0">

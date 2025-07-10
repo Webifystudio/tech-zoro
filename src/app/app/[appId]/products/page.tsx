@@ -26,6 +26,7 @@ interface Product {
   description: string;
   price: number;
   imageUrl: string;
+  quantity: number | null;
   platform: 'instagram' | 'whatsapp';
   instagramPostUrl?: string;
   createdAt: { seconds: number; nanoseconds: number; } | null;
@@ -50,6 +51,7 @@ export default function ProductsPage() {
   const [productName, setProductName] = useState('');
   const [productDesc, setProductDesc] = useState('');
   const [productPrice, setProductPrice] = useState('');
+  const [productQuantity, setProductQuantity] = useState('');
   const [productPlatform, setProductPlatform] = useState('');
   const [instagramPostUrl, setInstagramPostUrl] = useState('');
   const [productImageFile, setProductImageFile] = useState<File | null>(null);
@@ -93,6 +95,7 @@ export default function ProductsPage() {
       setProductName('');
       setProductDesc('');
       setProductPrice('');
+      setProductQuantity('');
       setProductPlatform('');
       setInstagramPostUrl('');
       setProductImageFile(null);
@@ -122,6 +125,7 @@ export default function ProductsPage() {
         name: productName.trim(),
         description: productDesc.trim(),
         price: parseFloat(productPrice),
+        quantity: productQuantity.trim() === '' ? null : parseInt(productQuantity, 10),
         platform: productPlatform,
         imageUrl: imageUrl,
         createdAt: serverTimestamp(),
@@ -189,17 +193,21 @@ export default function ProductsPage() {
                             <Input id="productPrice" type="number" value={productPrice} onChange={(e) => setProductPrice(e.target.value)} required />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="productPlatform">Sell Platform</Label>
-                            <Select onValueChange={setProductPlatform} value={productPlatform} required>
-                                <SelectTrigger id="productPlatform">
-                                    <SelectValue placeholder="Select a platform" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="instagram">Instagram</SelectItem>
-                                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                                </SelectContent>
-                            </Select>
+                           <Label htmlFor="productQuantity">Quantity</Label>
+                           <Input id="productQuantity" type="number" placeholder="Infinity" value={productQuantity} onChange={(e) => setProductQuantity(e.target.value)} />
                         </div>
+                   </div>
+                   <div className="space-y-2">
+                       <Label htmlFor="productPlatform">Sell Platform</Label>
+                       <Select onValueChange={setProductPlatform} value={productPlatform} required>
+                           <SelectTrigger id="productPlatform">
+                               <SelectValue placeholder="Select a platform" />
+                           </SelectTrigger>
+                           <SelectContent>
+                               <SelectItem value="instagram">Instagram</SelectItem>
+                               <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                           </SelectContent>
+                       </Select>
                    </div>
                    {productPlatform === 'instagram' && (
                      <div className="space-y-2">
@@ -259,11 +267,20 @@ export default function ProductsPage() {
                     <div className="absolute bottom-2 right-2 bg-background/80 backdrop-blur-sm p-1 rounded-md">
                         {platformIcons[product.platform]}
                     </div>
+                    {product.quantity !== null && product.quantity <= 0 && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">Out of Stock</span>
+                      </div>
+                    )}
                 </CardContent>
                 <CardHeader>
                     <CardTitle className="truncate">{product.name}</CardTitle>
-                    <CardDescription className="truncate">{product.description}</CardDescription>
-                    <p className="font-semibold text-lg text-primary">${parseFloat(String(product.price)).toFixed(2)}</p>
+                    <div className="flex justify-between items-center">
+                      <p className="font-semibold text-lg text-primary">${parseFloat(String(product.price)).toFixed(2)}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {product.quantity === null ? '∞ in stock' : `${product.quantity} in stock`}
+                      </p>
+                    </div>
                 </CardHeader>
             </Card>
           ))}

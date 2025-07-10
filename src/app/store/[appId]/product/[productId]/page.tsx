@@ -28,6 +28,7 @@ interface Product {
   description: string;
   price: number;
   imageUrl: string;
+  quantity: number | null;
   platform: 'instagram' | 'whatsapp';
   instagramPostUrl?: string;
 }
@@ -95,6 +96,8 @@ export default function ProductDetailPage() {
   const [couponError, setCouponError] = useState<string | null>(null);
   
   const [isRedirectDialogOpen, setIsRedirectDialogOpen] = useState(false);
+  
+  const isOutOfStock = product?.quantity !== null && product.quantity <= 0;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => setUser(currentUser));
@@ -104,7 +107,6 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (product) {
       setFinalPrice(product.price);
-      // Reset coupon on product change
       removeCoupon();
     }
   }, [product]);
@@ -297,21 +299,32 @@ export default function ProductDetailPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="grid md:grid-cols-2 gap-8 lg:gap-16">
                 <div>
-                <Card className="overflow-hidden shadow-lg">
-                    <Image
-                    src={product.imageUrl}
-                    alt={product.name}
-                    width={800}
-                    height={800}
-                    className="w-full object-cover aspect-square"
-                    />
-                </Card>
+                  <Card className="overflow-hidden shadow-lg relative">
+                      <Image
+                          src={product.imageUrl}
+                          alt={product.name}
+                          width={800}
+                          height={800}
+                          className="w-full object-cover aspect-square"
+                      />
+                      {isOutOfStock && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                              <span className="text-white font-bold text-2xl border-2 border-white rounded-md p-4">Out of Stock</span>
+                          </div>
+                      )}
+                  </Card>
                 </div>
                 <div className="flex flex-col gap-4">
                 <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">{product.name}</h1>
-                <div className="flex items-center gap-2">
-                    <StarRating rating={averageRating} />
-                    <span className="text-muted-foreground text-sm">({reviews.length} reviews)</span>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <StarRating rating={averageRating} />
+                        <span className="text-muted-foreground text-sm">({reviews.length} reviews)</span>
+                    </div>
+                    <Separator orientation="vertical" className="h-6"/>
+                    <span className="text-sm font-medium text-primary">
+                        {product.quantity === null ? "In Stock" : `${product.quantity} units available`}
+                    </span>
                 </div>
                 <div>
                     {appliedCoupon && finalPrice !== null ? (
@@ -342,9 +355,9 @@ export default function ProductDetailPage() {
                                 className="flex-1"
                                 value={couponCode}
                                 onChange={(e) => { setCouponCode(e.target.value); setCouponError(null); }}
-                                disabled={isApplyingCoupon}
+                                disabled={isApplyingCoupon || isOutOfStock}
                             />
-                            <Button onClick={handleApplyCoupon} disabled={isApplyingCoupon || !couponCode}>
+                            <Button onClick={handleApplyCoupon} disabled={isApplyingCoupon || !couponCode || isOutOfStock}>
                                 {isApplyingCoupon && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                                 Apply
                             </Button>
@@ -356,15 +369,15 @@ export default function ProductDetailPage() {
                 <div className="flex items-center gap-4 mt-2">
                     <div className="flex-1 flex flex-col sm:flex-row gap-4">
                         {isInCart ? (
-                            <Button size="lg" variant="outline" className="w-full" onClick={() => removeFromCart(product.id)}>
+                            <Button size="lg" variant="outline" className="w-full" onClick={() => removeFromCart(product.id)} disabled={isOutOfStock}>
                                 <Trash2 className="mr-2 h-5 w-5" /> Remove from Cart
                             </Button>
                         ) : (
-                            <Button size="lg" className="w-full" onClick={() => addToCart(product)}>
+                            <Button size="lg" className="w-full" onClick={() => addToCart(product)} disabled={isOutOfStock}>
                                 <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
                             </Button>
                         )}
-                        <Button size="lg" className="w-full bg-primary/90 hover:bg-primary" onClick={() => setIsRedirectDialogOpen(true)}>
+                        <Button size="lg" className="w-full bg-primary/90 hover:bg-primary" onClick={() => setIsRedirectDialogOpen(true)} disabled={isOutOfStock}>
                             <Zap className="mr-2 h-5 w-5" /> Buy Now
                         </Button>
                     </div>
