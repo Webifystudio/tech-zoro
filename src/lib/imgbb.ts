@@ -1,3 +1,4 @@
+
 'use server';
 
 import { Blob } from 'buffer';
@@ -29,7 +30,7 @@ export async function uploadImage(
     if (!response.ok) {
       const errorText = await response.text();
       console.error('ImgBB upload failed:', errorText);
-      return {error: `Image upload failed: ${response.statusText}`};
+      return {error: `Image upload failed: ${response.statusText} - ${errorText}`};
     }
 
     const result = await response.json();
@@ -44,10 +45,12 @@ export async function uploadImage(
     console.error('Error uploading image:', error);
     if (error.cause) {
       console.error('Fetch error cause:', error.cause);
-      return {error: `Network error: ${error.cause.code}`};
+      return {error: `Network error: ${error.cause}`};
     }
     return {
       error: error.message || 'An unknown error occurred during image upload.',
     };
   }
 }
+
+    

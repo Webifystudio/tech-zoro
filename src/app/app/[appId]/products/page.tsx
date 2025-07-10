@@ -112,14 +112,14 @@ export default function ProductsPage() {
 
     setIsCreating(true);
     try {
-      let imageUrl = '';
       const formData = new FormData();
       formData.append('image', productImageFile);
       const result = await uploadImage(formData);
-      if (result.url) {
-        imageUrl = result.url;
-      } else {
-        throw new Error(result.error || 'Product image upload failed');
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      if (!result.url) {
+        throw new Error('Image upload failed to return a URL.');
       }
 
       const newProduct: any = {
@@ -128,7 +128,7 @@ export default function ProductsPage() {
         price: parseFloat(productPrice),
         quantity: productQuantity.trim() === '' ? null : parseInt(productQuantity, 10),
         platform: productPlatform,
-        imageUrl: imageUrl,
+        imageUrl: result.url,
         createdAt: serverTimestamp(),
       };
 
@@ -298,3 +298,5 @@ export default function ProductsPage() {
     </div>
   );
 }
+
+    
