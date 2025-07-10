@@ -1,17 +1,23 @@
 'use server';
 
+import { Blob } from 'buffer';
+
 export async function uploadImage(
   formData: FormData
 ): Promise<{url: string; error?: undefined} | {error: string; url?: undefined}> {
   const apiKey = '2bb2346a6a907388d8a3b0beac2bca86';
-  const image = formData.get('image');
+  const image = formData.get('image') as File | null;
 
   if (!image) {
     return {error: 'No image file provided.'};
   }
 
+  // Convert File to a format suitable for server-side fetch
+  const imageBuffer = await image.arrayBuffer();
+  const imageBlob = new Blob([imageBuffer], { type: image.type });
+  
   const uploadFormData = new FormData();
-  uploadFormData.append('image', image);
+  uploadFormData.append('image', imageBlob, image.name);
 
   try {
     const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
