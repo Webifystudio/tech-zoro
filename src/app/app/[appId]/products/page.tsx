@@ -160,7 +160,7 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Products</h1>
           <p className="text-muted-foreground">Manage the products for your app.</p>
@@ -298,5 +298,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-
-    
