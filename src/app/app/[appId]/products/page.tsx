@@ -112,38 +112,48 @@ export default function ProductsPage() {
 
     setIsCreating(true);
     try {
-      const formData = new FormData();
-      formData.append('image', productImageFile);
-      const result = await uploadImage(formData);
-      if (result.error) {
-        throw new Error(result.error);
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(productImageFile);
+      reader.onloadend = async () => {
+          const base64Image = reader.result as string;
+
+          const result = await uploadImage(base64Image);
+          if (result.error) {
+            throw new Error(result.error);
+          }
+          if (!result.url) {
+            throw new Error('Image upload failed to return a URL.');
+          }
+
+          const newProduct: any = {
+            name: productName.trim(),
+            description: productDesc.trim(),
+            price: parseFloat(productPrice),
+            quantity: productQuantity.trim() === '' ? null : parseInt(productQuantity, 10),
+            platform: productPlatform,
+            imageUrl: result.url,
+            createdAt: serverTimestamp(),
+          };
+
+          if (productPlatform === 'instagram') {
+            newProduct.instagramPostUrl = instagramPostUrl;
+          }
+
+          await addDoc(collection(db, "apps", appId, "products"), newProduct);
+
+          resetForm();
+          setIsDialogOpen(false);
+          toast({ title: "Product Added", description: `"${productName.trim()}" has been added.` });
+          setIsCreating(false);
       }
-      if (!result.url) {
-        throw new Error('Image upload failed to return a URL.');
+      reader.onerror = (error) => {
+        console.error("FileReader error:", error);
+        throw new Error("Could not read the image file.");
       }
 
-      const newProduct: any = {
-        name: productName.trim(),
-        description: productDesc.trim(),
-        price: parseFloat(productPrice),
-        quantity: productQuantity.trim() === '' ? null : parseInt(productQuantity, 10),
-        platform: productPlatform,
-        imageUrl: result.url,
-        createdAt: serverTimestamp(),
-      };
-
-      if (productPlatform === 'instagram') {
-        newProduct.instagramPostUrl = instagramPostUrl;
-      }
-
-      await addDoc(collection(db, "apps", appId, "products"), newProduct);
-
-      resetForm();
-      setIsDialogOpen(false);
-      toast({ title: "Product Added", description: `"${productName.trim()}" has been added.` });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Failed to add product", description: error.message });
-    } finally {
       setIsCreating(false);
     }
   };
