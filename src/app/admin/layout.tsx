@@ -7,6 +7,7 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Loader2, Shield } from 'lucide-react';
 import { AdminSidebar } from '@/components/AdminSidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 export default function AdminLayout({
   children,
@@ -57,13 +58,15 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-muted/40">
-      <AdminSidebar />
-      <div className="flex-1">
-        <main className="p-4 sm:p-6 lg:p-8">
-            {children}
-        </main>
-      </div>
-    </div>
+    <SidebarProvider>
+        <div className="flex min-h-screen bg-muted/40">
+        <AdminSidebar />
+        <div className="flex-1">
+            <main className="p-4 sm:p-6 lg:p-8">
+                {children}
+            </main>
+        </div>
+        </div>
+    </SidebarProvider>
   );
 }
