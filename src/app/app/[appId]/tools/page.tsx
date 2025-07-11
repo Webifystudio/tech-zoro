@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, type FormEvent } from 'react';
@@ -136,10 +137,10 @@ export default function ToolsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-center gap-2"><Ticket className="h-6 w-6" /><CardTitle>Discount Coupons</CardTitle></div>
-            <CardDescription>Create and manage discount codes for your customers.</CardDescription>
+            <CardDescription>Create and manage discount codes for your customers to boost sales.</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoadingCoupons ? (
@@ -250,25 +251,8 @@ export default function ToolsPage() {
 
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-2"><Star className="h-6 w-6" /><CardTitle>Testimonials / Reviews</CardTitle></div>
-            <CardDescription>Manage customer feedback and display it on your store.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col items-center justify-center h-40 text-center border-2 border-dashed border-border rounded-lg">
-                <Star className="h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-semibold">Coming Soon!</h3>
-                <p className="mt-1 text-sm text-muted-foreground">This feature is under development.</p>
-            </div>
-          </CardContent>
-           <CardFooter>
-            <Button variant="outline" disabled>Manage Reviews</Button>
-          </CardFooter>
-        </Card>
-
-        <Card>
-          <CardHeader>
             <div className="flex items-center gap-2"><QrCode className="h-6 w-6" /><CardTitle>QR Code Generator</CardTitle></div>
-            <CardDescription>Generate a QR code that links to your store.</CardDescription>
+            <CardDescription>Generate a QR code that links to your store or any URL.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-6">
             <div className="p-4 bg-white rounded-lg">
@@ -281,6 +265,23 @@ export default function ToolsPage() {
           </CardContent>
           <CardFooter>
             <Button onClick={handleDownloadQR}>Download QR Code</Button>
+          </CardFooter>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2"><Star className="h-6 w-6" /><CardTitle>Testimonials / Reviews</CardTitle></div>
+            <CardDescription>Manage customer feedback and display it on your store.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col items-center justify-center h-40 text-center border-2 border-dashed border-border rounded-lg">
+                <Star className="h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">Coming Soon!</h3>
+                <p className="mt-1 text-sm text-muted-foreground">This feature is under development.</p>
+            </div>
+          </CardContent>
+           <CardFooter>
+            <Button variant="outline" disabled>Manage Reviews</Button>
           </CardFooter>
         </Card>
 
