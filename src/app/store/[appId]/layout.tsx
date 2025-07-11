@@ -23,6 +23,7 @@ interface AppData {
   name: string;
   customization?: {
     logoUrl?: string;
+    theme?: string;
   };
   marketing?: {
     isBannerActive?: boolean;
@@ -54,6 +55,17 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
   const cartTotal = cartItems.reduce((total, item) => total + item.price, 0);
 
   const [linkStatus, setLinkStatus] = useState<'offline' | 'online'>('offline');
+  const [theme, setTheme] = useState('default');
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+        if (event.data.type === 'theme-change') {
+            document.documentElement.dataset.theme = event.data.theme;
+        }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   useEffect(() => {
     if (!appId) return;
@@ -88,7 +100,12 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
     if (!appId || !db) return;
     const unsub = onSnapshot(doc(db, 'apps', appId), (doc) => {
       if (doc.exists()) {
-        setAppData(doc.data() as AppData);
+        const data = doc.data() as AppData;
+        setAppData(data);
+        if (data.customization?.theme) {
+          setTheme(data.customization.theme);
+          document.documentElement.dataset.theme = data.customization.theme;
+        }
       }
       setIsLoading(false);
     });
@@ -106,9 +123,9 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
       setIsSearchExpanded(false);
   };
 
-  if (linkStatus === 'offline') {
+  if (linkStatus === 'offline' && typeof window !== 'undefined' && window.parent === window) {
     return (
-        <div className="flex flex-col min-h-screen bg-muted/40">
+        <div className="flex flex-col min-h-screen bg-muted/40" data-theme={theme}>
             <div className="flex-grow flex flex-col items-center justify-center text-center p-8">
                  <Globe className="h-24 w-24 text-primary/30 mb-8" />
                  <h1 className="text-4xl font-bold tracking-tight text-foreground">Store Preview is Offline</h1>
@@ -131,7 +148,7 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <div className="bg-muted/40 min-h-screen flex flex-col">
+    <div className="bg-muted/40 min-h-screen flex flex-col" data-theme={theme}>
       {appData?.marketing?.isBannerActive && appData.marketing.bannerText && (
         <div className="bg-primary text-primary-foreground text-center py-2 px-4 text-sm font-semibold animate-slide-in-from-bottom">
           {appData.marketing.bannerText}
@@ -265,3 +282,5 @@ export default function StoreLayout({
     </CartProvider>
   )
 }
+
+    

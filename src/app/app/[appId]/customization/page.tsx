@@ -1,14 +1,14 @@
 
 "use client";
 
-import { useState, useRef, useEffect, type ChangeEvent } from 'react';
+import { useState, useRef, useEffect, type ChangeEvent, useMemo } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, Palette, Smartphone, Loader2 } from 'lucide-react';
+import { Upload, Palette, Smartphone, Loader2, RefreshCw } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useParams } from 'next/navigation';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -23,6 +23,7 @@ interface CustomizationSettings {
   coverUrl: string | null;
   primaryColor: string;
   fontFamily: string;
+  theme: 'default' | 'dark' | 'matrix' | 'neon';
 }
 
 export default function CustomizationPage() {
@@ -39,7 +40,10 @@ export default function CustomizationPage() {
     coverUrl: null,
     primaryColor: '#34D399',
     fontFamily: 'inter',
+    theme: 'default',
   });
+  
+  const [stagedSettings, setStagedSettings] = useState<CustomizationSettings>(settings);
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -48,6 +52,16 @@ export default function CustomizationPage() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [iframeKey, setIframeKey] = useState(Date.now());
+
+  const publicUrl = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}/store/${appId}`;
+    }
+    return '';
+  }, [appId]);
 
   useEffect(() => {
     onAuthStateChanged(auth, (currentUser) => setUser(currentUser));
@@ -62,9 +76,14 @@ export default function CustomizationPage() {
         if (appDocSnap.exists()) {
           const appData = appDocSnap.data();
           if (appData.customization) {
-            setSettings(appData.customization);
-            setLogoPreview(appData.customization.logoUrl);
-            setCoverPreview(appData.customization.coverUrl);
+            const fetchedSettings = {
+              ...settings, // Start with defaults
+              ...appData.customization,
+            };
+            setSettings(fetchedSettings);
+            setStagedSettings(fetchedSettings);
+            setLogoPreview(fetchedSettings.logoUrl);
+            setCoverPreview(fetchedSettings.coverUrl);
           }
         }
         setIsLoading(false);
@@ -72,6 +91,11 @@ export default function CustomizationPage() {
       fetchSettings();
     }
   }, [user, appId]);
+
+  useEffect(() => {
+    const message = { type: 'theme-change', theme: stagedSettings.theme };
+    iframeRef.current?.contentWindow?.postMessage(message, '*');
+  }, [stagedSettings.theme]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>, type: 'logo' | 'cover') => {
     if (e.target.files && e.target.files[0]) {
@@ -88,27 +112,35 @@ export default function CustomizationPage() {
   };
 
   const handleInputChange = (field: keyof CustomizationSettings, value: string) => {
-    setSettings(prev => ({ ...prev, [field]: value }));
+    setStagedSettings(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSaveChanges = async () => {
     if (!db || !appId) return;
     setIsSaving(true);
     try {
-      let updatedSettings = { ...settings };
+      let updatedSettings = { ...stagedSettings };
 
       if (logoFile) {
-        const formData = new FormData();
-        formData.append('image', logoFile);
-        const result = await uploadImage(formData);
+        const base64Image = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(logoFile);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = error => reject(error);
+        });
+        const result = await uploadImage(base64Image);
         if(result.url) updatedSettings.logoUrl = result.url;
         else throw new Error('Logo upload failed');
       }
 
       if (coverFile) {
-        const formData = new FormData();
-        formData.append('image', coverFile);
-        const result = await uploadImage(formData);
+        const base64Image = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(coverFile);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = error => reject(error);
+        });
+        const result = await uploadImage(base64Image);
         if(result.url) updatedSettings.coverUrl = result.url;
         else throw new Error('Cover upload failed');
       }
@@ -116,8 +148,10 @@ export default function CustomizationPage() {
       const appDocRef = doc(db, 'apps', appId);
       await updateDoc(appDocRef, { customization: updatedSettings });
       setSettings(updatedSettings);
+      setStagedSettings(updatedSettings);
       setLogoFile(null);
       setCoverFile(null);
+      setIframeKey(Date.now()); // Reload iframe to show saved changes
       toast({ title: "Customization saved!" });
 
     } catch (error: any) {
@@ -192,21 +226,36 @@ export default function CustomizationPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Colors & Fonts</CardTitle>
-              <CardDescription>Choose your brand colors and typography.</CardDescription>
+              <CardTitle>Theme & Style</CardTitle>
+              <CardDescription>Choose your brand colors, fonts and theme.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
+                  <Label>Theme</Label>
+                  <Select value={stagedSettings.theme} onValueChange={(value) => handleInputChange('theme', value)}>
+                      <SelectTrigger className="max-w-xs">
+                          <SelectValue placeholder="Select a theme" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="default">Default</SelectItem>
+                          <SelectItem value="dark">Dark</SelectItem>
+                          <SelectItem value="matrix">Matrix</SelectItem>
+                          <SelectItem value="neon">Neon</SelectItem>
+                      </SelectContent>
+                  </Select>
+              </div>
+              <Separator />
+              <div className="space-y-4">
                 <Label>Primary Color</Label>
                 <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 rounded-md border" style={{ backgroundColor: settings.primaryColor }}/>
-                    <Input value={settings.primaryColor} onChange={(e) => handleInputChange('primaryColor', e.target.value)} className="max-w-xs" />
+                    <div className="w-10 h-10 rounded-md border" style={{ backgroundColor: stagedSettings.primaryColor }}/>
+                    <Input value={stagedSettings.primaryColor} onChange={(e) => handleInputChange('primaryColor', e.target.value)} className="max-w-xs" />
                 </div>
               </div>
               <Separator />
                <div className="space-y-4">
                 <Label>Font Family</Label>
-                <Select value={settings.fontFamily} onValueChange={(value) => handleInputChange('fontFamily', value)}>
+                <Select value={stagedSettings.fontFamily} onValueChange={(value) => handleInputChange('fontFamily', value)}>
                     <SelectTrigger className="max-w-xs">
                         <SelectValue placeholder="Select a font" />
                     </SelectTrigger>
@@ -223,23 +272,38 @@ export default function CustomizationPage() {
 
         <div className="lg:col-span-1 lg:sticky top-20">
           <Card>
-            <CardHeader className="flex flex-row items-center gap-2">
-                <Smartphone />
-                <CardTitle>Store Preview</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <Smartphone />
+                    <CardTitle>Store Preview</CardTitle>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setIframeKey(Date.now())} title="Refresh Preview">
+                    <RefreshCw className="h-4 w-4" />
+                </Button>
             </CardHeader>
             <CardContent>
-                <div className="relative mx-auto border-gray-800 dark:border-gray-800 bg-gray-800 border-[14px] rounded-[2.5rem] h-[600px] w-[300px] shadow-xl">
+                <div className="relative mx-auto border-gray-800 dark:border-gray-800 bg-gray-800 border-[14px] rounded-[2.5rem] h-[600px] w-full shadow-xl">
                     <div className="w-[140px] h-[18px] bg-gray-800 top-0 rounded-b-[1rem] left-1/2 -translate-x-1/2 absolute"></div>
                     <div className="h-[46px] w-[3px] bg-gray-800 absolute -left-[17px] top-[124px] rounded-l-lg"></div>
                     <div className="h-[46px] w-[3px] bg-gray-800 absolute -left-[17px] top-[178px] rounded-l-lg"></div>
                     <div className="h-[64px] w-[3px] bg-gray-800 absolute -right-[17px] top-[142px] rounded-r-lg"></div>
-                    <div className="rounded-[2rem] overflow-hidden w-[272px] h-[572px] bg-background">
-                        <div className="h-full w-full bg-muted flex items-center justify-center text-center p-4">
-                            <div>
-                                <Palette className="mx-auto h-16 w-16 text-muted-foreground" />
-                                <p className="mt-4 text-sm font-semibold text-muted-foreground">Your beautiful store preview will appear here.</p>
+                    <div className="rounded-[2rem] overflow-hidden w-full h-full bg-background">
+                        {publicUrl ? (
+                           <iframe
+                                key={iframeKey}
+                                ref={iframeRef}
+                                src={publicUrl}
+                                className="w-full h-full border-0"
+                                title="Store Preview"
+                           />
+                        ) : (
+                            <div className="h-full w-full bg-muted flex items-center justify-center text-center p-4">
+                                <div>
+                                    <Palette className="mx-auto h-16 w-16 text-muted-foreground" />
+                                    <p className="mt-4 text-sm font-semibold text-muted-foreground">Your beautiful store preview will appear here.</p>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             </CardContent>
@@ -255,3 +319,5 @@ export default function CustomizationPage() {
     </div>
   );
 }
+
+    
