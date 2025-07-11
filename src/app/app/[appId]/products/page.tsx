@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, PlusCircle, Trash2, Upload, Instagram, MessageCircle, ShoppingBag } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Upload, Instagram, MessageCircle, ShoppingBag, Link as LinkIcon } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Product {
@@ -28,14 +28,16 @@ interface Product {
   price: number;
   imageUrl: string;
   quantity: number | null;
-  platform: 'instagram' | 'whatsapp';
+  platform: 'instagram' | 'whatsapp' | 'affiliate';
   instagramPostUrl?: string;
+  affiliateUrl?: string;
   createdAt: { seconds: number; nanoseconds: number; } | null;
 }
 
 const platformIcons = {
     instagram: <Instagram className="h-4 w-4" />,
     whatsapp: <MessageCircle className="h-4 w-4" />,
+    affiliate: <LinkIcon className="h-4 w-4" />,
 };
 
 export default function ProductsPage() {
@@ -55,6 +57,7 @@ export default function ProductsPage() {
   const [productQuantity, setProductQuantity] = useState('');
   const [productPlatform, setProductPlatform] = useState('');
   const [instagramPostUrl, setInstagramPostUrl] = useState('');
+  const [affiliateUrl, setAffiliateUrl] = useState('');
   const [productImageFile, setProductImageFile] = useState<File | null>(null);
   const [productImagePreview, setProductImagePreview] = useState<string | null>(null);
   const productImageInputRef = useRef<HTMLInputElement>(null);
@@ -99,28 +102,28 @@ export default function ProductsPage() {
       setProductQuantity('');
       setProductPlatform('');
       setInstagramPostUrl('');
+      setAffiliateUrl('');
       setProductImageFile(null);
       setProductImagePreview(null);
   }
 
   const handleCreateProduct = async (e: FormEvent) => {
     e.preventDefault();
-    if (!productName.trim() || !productPrice || !productImageFile || !productPlatform || !user || !db || (productPlatform === 'instagram' && !instagramPostUrl)) {
+    if (!productName.trim() || !productPrice || !productImageFile || !productPlatform || !user || !db || (productPlatform === 'instagram' && !instagramPostUrl) || (productPlatform === 'affiliate' && !affiliateUrl)) {
         toast({ variant: "destructive", title: "Missing fields", description: "Please fill out all required fields." });
         return;
     }
 
     setIsCreating(true);
     try {
-      // Convert file to base64
       const reader = new FileReader();
       reader.readAsDataURL(productImageFile);
       reader.onloadend = async () => {
           const base64Image = reader.result as string;
-
           const result = await uploadImage(base64Image);
+
           if (result.error) {
-            throw new Error(result.error);
+            throw new Error(`Image upload failed: ${result.error}`);
           }
           if (!result.url) {
             throw new Error('Image upload failed to return a URL.');
@@ -139,13 +142,15 @@ export default function ProductsPage() {
           if (productPlatform === 'instagram') {
             newProduct.instagramPostUrl = instagramPostUrl;
           }
+          if (productPlatform === 'affiliate') {
+            newProduct.affiliateUrl = affiliateUrl;
+          }
 
           await addDoc(collection(db, "apps", appId, "products"), newProduct);
 
           resetForm();
           setIsDialogOpen(false);
           toast({ title: "Product Added", description: `"${productName.trim()}" has been added.` });
-          setIsCreating(false);
       }
       reader.onerror = (error) => {
         console.error("FileReader error:", error);
@@ -154,6 +159,7 @@ export default function ProductsPage() {
 
     } catch (error: any) {
       toast({ variant: "destructive", title: "Failed to add product", description: error.message });
+    } finally {
       setIsCreating(false);
     }
   };
@@ -218,6 +224,7 @@ export default function ProductsPage() {
                            <SelectContent>
                                <SelectItem value="instagram">Instagram</SelectItem>
                                <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                               <SelectItem value="affiliate">Affiliate</SelectItem>
                            </SelectContent>
                        </Select>
                    </div>
@@ -225,6 +232,12 @@ export default function ProductsPage() {
                      <div className="space-y-2">
                        <Label htmlFor="instagramPostUrl">Instagram Post URL</Label>
                        <Input id="instagramPostUrl" placeholder="https://instagram.com/p/..." value={instagramPostUrl} onChange={(e) => setInstagramPostUrl(e.target.value)} required />
+                     </div>
+                   )}
+                   {productPlatform === 'affiliate' && (
+                     <div className="space-y-2">
+                       <Label htmlFor="affiliateUrl">Affiliate Link</Label>
+                       <Input id="affiliateUrl" placeholder="https://product.com/link" value={affiliateUrl} onChange={(e) => setAffiliateUrl(e.target.value)} required />
                      </div>
                    )}
                 </div>

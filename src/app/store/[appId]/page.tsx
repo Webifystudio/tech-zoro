@@ -9,7 +9,7 @@ import { collection, doc, onSnapshot, query, orderBy, where } from 'firebase/fir
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowRight, MessageCircle, Instagram, PackageX } from 'lucide-react';
+import { ArrowRight, MessageCircle, Instagram, PackageX, Link as LinkIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -21,7 +21,7 @@ interface Product {
   price: number;
   imageUrl: string;
   quantity: number | null;
-  platform: 'instagram' | 'whatsapp';
+  platform: 'instagram' | 'whatsapp' | 'affiliate';
 }
 
 interface Category {
@@ -198,7 +198,7 @@ export default function StorefrontPage() {
                         <div className="flex items-center justify-between mt-4">
                           <p className="font-bold text-xl text-primary">${product.price.toFixed(2)}</p>
                           <Badge variant="outline" className="capitalize">
-                              {product.platform === 'whatsapp' ? <MessageCircle className="h-4 w-4 mr-1.5"/> : <Instagram className="h-4 w-4 mr-1.5"/>}
+                              {product.platform === 'whatsapp' ? <MessageCircle className="h-4 w-4 mr-1.5"/> : product.platform === 'instagram' ? <Instagram className="h-4 w-4 mr-1.5"/> : <LinkIcon className="h-4 w-4 mr-1.5"/>}
                               {product.platform}
                           </Badge>
                         </div>

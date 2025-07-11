@@ -10,7 +10,7 @@ interface Product {
   description: string;
   price: number;
   imageUrl: string;
-  platform: 'instagram' | 'whatsapp';
+  platform: 'instagram' | 'whatsapp' | 'affiliate';
 }
 
 interface CartContextType {

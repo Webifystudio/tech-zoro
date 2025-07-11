@@ -29,8 +29,9 @@ interface Product {
   price: number;
   imageUrl: string;
   quantity: number | null;
-  platform: 'instagram' | 'whatsapp';
+  platform: 'instagram' | 'whatsapp' | 'affiliate';
   instagramPostUrl?: string;
+  affiliateUrl?: string;
 }
 
 interface AppIntegrations {
@@ -258,6 +259,8 @@ export default function ProductDetailPage() {
         url = `https://wa.me/${appIntegrations.whatsappNumber}?text=${message}`;
     } else if (product.platform === 'instagram' && product.instagramPostUrl) {
         url = product.instagramPostUrl;
+    } else if (product.platform === 'affiliate' && product.affiliateUrl) {
+        url = product.affiliateUrl;
     }
     
     if (url) {
