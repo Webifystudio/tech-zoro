@@ -246,7 +246,7 @@ export default function OrdersPage() {
             <TableCell className="font-medium">{order.productName}</TableCell>
             <TableCell>{order.customer}</TableCell>
             <TableCell>{order.quantity}</TableCell>
-            <TableCell>${order.price.toFixed(2)}</TableCell>
+            <TableCell>₹{order.price.toFixed(2)}</TableCell>
             <TableCell>
                 <Badge variant="outline" className="flex items-center gap-2 max-w-min">
                    {platformIcons[order.platform] || <Package className="h-4 w-4"/>}

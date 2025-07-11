@@ -57,8 +57,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const removeFromCart = (itemId: string) => {
-    setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
-    toast({ title: "Removed from Cart" });
+    setCartItems(prevItems => {
+      const itemToRemove = prevItems.find(item => item.id === itemId);
+      if (itemToRemove) {
+        toast({ title: "Removed from Cart", description: `${itemToRemove.name} has been removed from your cart.` });
+      }
+      return prevItems.filter(item => item.id !== itemId);
+    });
   };
 
   const clearCart = () => {

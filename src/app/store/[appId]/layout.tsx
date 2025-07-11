@@ -204,7 +204,7 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
                                         <Image src={item.imageUrl} alt={item.name} width={64} height={64} className="rounded-md object-cover" />
                                         <div className="flex-grow">
                                             <p className="font-semibold">{item.name}</p>
-                                            <p className="text-muted-foreground">${item.price.toFixed(2)}</p>
+                                            <p className="text-muted-foreground">₹{item.price.toFixed(2)}</p>
                                         </div>
                                         <Button variant="ghost" size="icon" onClick={() => removeFromCart(item.id)}>
                                             <Trash2 className="h-4 w-4 text-destructive" />
@@ -218,7 +218,7 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
                                 <Separator />
                                 <div className="flex justify-between font-bold text-lg">
                                     <span>Subtotal</span>
-                                    <span>${cartTotal.toFixed(2)}</span>
+                                    <span>₹{cartTotal.toFixed(2)}</span>
                                 </div>
                                 <Button size="lg" className="w-full">Proceed to Checkout</Button>
                                 <Button variant="outline" className="w-full" onClick={clearCart}>Clear Cart</Button>

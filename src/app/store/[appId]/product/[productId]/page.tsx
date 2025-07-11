@@ -335,11 +335,11 @@ export default function ProductDetailPage() {
                 <div>
                     {appliedCoupon && finalPrice !== null ? (
                         <div className="flex items-baseline gap-2">
-                            <p className="text-3xl font-bold text-primary">${finalPrice.toFixed(2)}</p>
-                            <p className="text-xl font-medium text-muted-foreground line-through">${product.price.toFixed(2)}</p>
+                            <p className="text-3xl font-bold text-primary">₹{finalPrice.toFixed(2)}</p>
+                            <p className="text-xl font-medium text-muted-foreground line-through">₹{product.price.toFixed(2)}</p>
                         </div>
                     ) : (
-                        <p className="text-3xl font-bold text-primary">${finalPrice?.toFixed(2) || product.price.toFixed(2)}</p>
+                        <p className="text-3xl font-bold text-primary">₹{finalPrice?.toFixed(2) || product.price.toFixed(2)}</p>
                     )}
                 </div>
                 <p className="text-muted-foreground leading-relaxed">{product.description}</p>

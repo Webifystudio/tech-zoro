@@ -302,7 +302,7 @@ export default function ProductsPage() {
                 <CardHeader>
                     <CardTitle className="truncate">{product.name}</CardTitle>
                     <div className="flex justify-between items-center">
-                      <p className="font-semibold text-lg text-primary">${parseFloat(String(product.price)).toFixed(2)}</p>
+                      <p className="font-semibold text-lg text-primary">₹{parseFloat(String(product.price)).toFixed(2)}</p>
                       <p className="text-sm text-muted-foreground">
                         {product.quantity === null ? '∞ in stock' : `${product.quantity} in stock`}
                       </p>

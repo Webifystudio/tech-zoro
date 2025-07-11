@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Globe, Eye, Palette, Copy, Check, Timer, RefreshCw } from 'lucide-react';
+import { Globe, Eye, Palette, Copy, Check, Timer, RefreshCw, MessageCircle, Zap } from 'lucide-react';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 
@@ -140,6 +140,31 @@ export default function StorefrontManagementPage() {
             <p className="text-sm text-muted-foreground text-center md:text-right">
                 Status: <span className={`font-semibold ${linkStatus === 'online' ? 'text-green-600' : 'text-destructive'}`}>{linkStatus.toUpperCase()}</span>
             </p>
+        </CardFooter>
+      </Card>
+
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader>
+            <div className="flex items-center gap-3">
+              <Zap className="h-8 w-8 text-primary" />
+              <div>
+                <CardTitle>Go Live! Publish Your Store</CardTitle>
+                <CardDescription>Make your store permanently available 24/7 to all your customers.</CardDescription>
+              </div>
+            </div>
+        </CardHeader>
+        <CardContent>
+            <p className="text-sm text-foreground/90 leading-relaxed">
+              We provide free services for image hosting and storage, but making your website live 24/7 requires a small hosting fee. 
+              The cost is very affordable, under <span className="font-bold">₹100</span>.
+            </p>
+        </CardContent>
+        <CardFooter>
+             <Button asChild>
+                <a href={`https://wa.me/9526339491?text=Hi, I'm interested in making my store public. My App ID is: ${appId}`} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="mr-2 h-4 w-4"/> Pay on WhatsApp
+                </a>
+             </Button>
         </CardFooter>
       </Card>
 

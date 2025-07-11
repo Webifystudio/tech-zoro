@@ -196,7 +196,7 @@ export default function StorefrontPage() {
                         <h3 className="font-semibold text-lg truncate">{product.name}</h3>
                         <p className="text-muted-foreground text-sm mt-1 flex-grow">{product.description}</p>
                         <div className="flex items-center justify-between mt-4">
-                          <p className="font-bold text-xl text-primary">${product.price.toFixed(2)}</p>
+                          <p className="font-bold text-xl text-primary">₹{product.price.toFixed(2)}</p>
                           <Badge variant="outline" className="capitalize">
                               {product.platform === 'whatsapp' ? <MessageCircle className="h-4 w-4 mr-1.5"/> : product.platform === 'instagram' ? <Instagram className="h-4 w-4 mr-1.5"/> : <LinkIcon className="h-4 w-4 mr-1.5"/>}
                               {product.platform}
