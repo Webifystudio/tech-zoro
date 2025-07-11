@@ -67,10 +67,9 @@ export function AppSidebar() {
   return (
     <Sidebar>
         <SidebarHeader>
-            <div className="flex items-center gap-2 p-2">
-              <Globe className="w-8 h-8 text-primary" />
-              <h2 className="text-lg font-semibold text-primary truncate">App Dashboard</h2>
-            </div>
+            <Link href="/" className="flex items-center gap-2 p-2">
+              <h1 className="text-2xl font-bold tracking-tight text-primary cursor-pointer" style={{fontFamily: "'Brush Script MT', 'Cursive'"}}>ZORO</h1>
+            </Link>
         </SidebarHeader>
         <SidebarContent>
             <SidebarMenu>
@@ -80,15 +79,13 @@ export function AppSidebar() {
                 
                 <SidebarMenuItem>
                     <Link href={`/app/${appId}/tools`} passHref>
-                        <SidebarMenuButton isActive={pathname === `/app/${appId}/tools`} tooltip="Extensions">
+                        <SidebarMenuButton isActive={pathname.startsWith(`/app/${appId}/tools`)} tooltip="Extensions">
                             <Puzzle />
                             <span>Extensions</span>
                         </SidebarMenuButton>
                     </Link>
                 </SidebarMenuItem>
 
-                {installedExtensions.length > 0 && <SidebarSeparator className="my-2" />}
-                
                 {renderMenuItems(availableExtensions.filter(ext => installedExtensions.includes(ext.id)))}
 
                 <SidebarSeparator className="my-2"/>
