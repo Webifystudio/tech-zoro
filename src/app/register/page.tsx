@@ -1,3 +1,4 @@
+
 import { RegisterForm } from '@/components/auth/RegisterForm';
 import Link from 'next/link';
 import Image from 'next/image';

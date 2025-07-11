@@ -21,6 +21,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface AppData {
   name: string;
+  isPublic?: boolean;
   customization?: {
     logoUrl?: string;
     theme?: string;
@@ -56,6 +57,9 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
 
   const [linkStatus, setLinkStatus] = useState<'offline' | 'online'>('offline');
   const [theme, setTheme] = useState('default');
+  
+  const statusKey = useMemo(() => `storefront_status_${appId}`, [appId]);
+  const isPubliclyHosted = appData?.isPublic === true;
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -70,22 +74,24 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!appId) return;
     
-    const checkStatus = () => {
-        const status = localStorage.getItem(`storefront_status_${appId}`);
-        if (status === 'online') {
-            setLinkStatus('online');
+    // This is for the temporary preview link
+    const checkPreviewStatus = () => {
+        const status = localStorage.getItem(statusKey);
+        const startTime = localStorage.getItem(`${statusKey}_start_time`);
+
+        if (status === 'online' && startTime) {
+            const elapsed = (Date.now() - parseInt(startTime, 10)) / 1000;
+            if(elapsed < 1800) setLinkStatus('online');
+            else setLinkStatus('offline');
         } else {
             setLinkStatus('offline');
         }
     };
-    checkStatus();
+    checkPreviewStatus();
 
-    const intervalId = setInterval(checkStatus, 1000); // Check every second
-
+    const intervalId = setInterval(checkPreviewStatus, 5000); // Check every 5 seconds
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === `storefront_status_${appId}`) {
-        checkStatus();
-      }
+      if (event.key === statusKey) checkPreviewStatus();
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -94,7 +100,7 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
         clearInterval(intervalId);
         window.removeEventListener('storage', handleStorageChange);
     };
-  }, [appId]);
+  }, [appId, statusKey]);
 
   useEffect(() => {
     if (!appId || !db) return;
@@ -106,6 +112,9 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
           setTheme(data.customization.theme);
           document.documentElement.dataset.theme = data.customization.theme;
         }
+      } else {
+        // App not found, treat as offline
+        setAppData(null);
       }
       setIsLoading(false);
     });
@@ -123,20 +132,22 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
       setIsSearchExpanded(false);
   };
 
-  if (linkStatus === 'offline' && typeof window !== 'undefined' && window.parent === window) {
+  const isStoreAccessible = isPubliclyHosted || linkStatus === 'online';
+
+  if (!isLoading && !isStoreAccessible && typeof window !== 'undefined' && window.parent === window) {
     return (
         <div className="flex flex-col min-h-screen bg-muted/40" data-theme={theme}>
             <div className="flex-grow flex flex-col items-center justify-center text-center p-8">
                  <Globe className="h-24 w-24 text-primary/30 mb-8" />
-                 <h1 className="text-4xl font-bold tracking-tight text-foreground">Store Preview is Offline</h1>
+                 <h1 className="text-4xl font-bold tracking-tight text-foreground">Store is Offline</h1>
                  <p className="mt-4 text-lg text-muted-foreground max-w-md">
-                     This is a temporary preview link that is not currently active.
+                     This store is not currently available to the public.
                  </p>
                  <p className="mt-2 text-sm text-muted-foreground max-w-md">
-                     If you are the store owner, please go to your dashboard under <span className="font-semibold text-foreground">Storefront</span> and click "Start Preview" or "Renew Link" to activate it.
+                     If you are the store owner, please go to your dashboard under <span className="font-semibold text-foreground">Storefront</span> and either publish your store or activate a temporary preview link.
                  </p>
                  <Button asChild className="mt-8">
-                     <Link href={`/app/${appId}/storefront`}>
+                     <Link href={`/app/${appId}`}>
                          <RefreshCw className="mr-2 h-4 w-4" />
                          Go to Dashboard
                      </Link>
@@ -282,5 +293,3 @@ export default function StoreLayout({
     </CartProvider>
   )
 }
-
-    

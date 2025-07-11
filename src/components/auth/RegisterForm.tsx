@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -6,8 +7,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, getAdditionalUserInfo, type User } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 
-import { auth, googleProvider, isFirebaseConfigured } from '@/lib/firebase';
+import { auth, googleProvider, isFirebaseConfigured, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,6 +55,17 @@ export function RegisterForm() {
       username: "",
     },
   });
+  
+  const createUserInFirestore = async (user: User) => {
+    if (!db) return;
+    const userRef = doc(db, 'users', user.uid);
+    await setDoc(userRef, {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+    }, { merge: true }); // Use merge to avoid overwriting existing data if any
+  }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!isFirebaseConfigured || !auth) {
@@ -70,6 +83,8 @@ export function RegisterForm() {
       await updateProfile(userCredential.user, {
         displayName: values.username,
       });
+
+      await createUserInFirestore(userCredential.user);
 
       toast({
         title: "Account created!",
@@ -107,6 +122,8 @@ export function RegisterForm() {
     try {
         const result = await signInWithPopup(auth, googleProvider);
         const additionalInfo = getAdditionalUserInfo(result);
+        
+        await createUserInFirestore(result.user);
 
         if (additionalInfo?.isNewUser) {
             setGoogleUser(result.user);
@@ -139,6 +156,7 @@ export function RegisterForm() {
         await updateProfile(googleUser, {
             displayName: values.username,
         });
+        await createUserInFirestore(auth.currentUser!); // Update firestore with new display name
         toast({
             title: "Registration complete!",
             description: "Your profile has been created.",
