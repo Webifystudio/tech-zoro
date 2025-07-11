@@ -1,31 +1,68 @@
 
 "use client";
 
-import { Sidebar, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarContent } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, Globe, LayoutGrid, ShoppingBag, BarChart3, Megaphone, Palette, Wrench, Users2, ClipboardList, Share2, PackageX } from 'lucide-react';
+import { Sidebar, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarContent, SidebarSeparator } from '@/components/ui/sidebar';
+import { LayoutDashboard, Settings, Globe, LayoutGrid, ShoppingBag, BarChart3, Megaphone, Palette, Wrench, Users2, ClipboardList, Share2, PackageX, Puzzle, Ticket, QrCode } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useEffect, useState } from 'react';
+
+const coreMenuItems = [
+    { href: `/app/{appId}`, label: 'Overview', icon: LayoutDashboard },
+    { href: `/app/{appId}/storefront`, label: 'Storefront', icon: Globe },
+    { href: `/app/{appId}/orders`, label: 'Orders', icon: ClipboardList },
+    { href: `/app/{appId}/products`, label: 'Products', icon: ShoppingBag },
+    { href: `/app/{appId}/out-of-stock`, label: 'Out of Stock', icon: PackageX },
+    { href: `/app/{appId}/categories`, label: 'Categories', icon: LayoutGrid },
+    { href: `/app/{appId}/analytics`, label: 'Analytics', icon: BarChart3 },
+];
+
+const managementMenuItems = [
+    { href: `/app/{appId}/marketing`, label: 'Marketing', icon: Megaphone },
+    { href: `/app/{appId}/customization`, label: 'Customization', icon: Palette },
+    { href: `/app/{appId}/integrations`, label: 'Integrations', icon: Share2 },
+    { href: `/app/{appId}/team`, label: 'Team', icon: Users2 },
+    { href: `/app/{appId}/settings`, label: 'Settings', icon: Settings },
+];
+
+const availableExtensions = [
+  { id: 'coupons', label: 'Coupons', icon: Ticket, href: '/app/{appId}/tools/coupons' },
+  { id: 'qrcode', label: 'QR Code', icon: QrCode, href: '/app/{appId}/tools/qrcode' },
+];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const params = useParams();
   const appId = params.appId as string;
+  
+  // We use a state to force re-render on storage change
+  const [installedExtensions] = useLocalStorage<string[]>(`installed_extensions_${appId}`, ['coupons']);
+  const [_, setTick] = useState(0);
 
-  const menuItems = [
-    { href: `/app/${appId}`, label: 'Overview', icon: LayoutDashboard },
-    { href: `/app/${appId}/storefront`, label: 'Storefront', icon: Globe },
-    { href: `/app/${appId}/orders`, label: 'Orders', icon: ClipboardList },
-    { href: `/app/${appId}/products`, label: 'Products', icon: ShoppingBag },
-    { href: `/app/${appId}/out-of-stock`, label: 'Out of Stock', icon: PackageX },
-    { href: `/app/${appId}/categories`, label: 'Categories', icon: LayoutGrid },
-    { href: `/app/${appId}/analytics`, label: 'Analytics', icon: BarChart3 },
-    { href: `/app/${appId}/marketing`, label: 'Marketing', icon: Megaphone },
-    { href: `/app/${appId}/customization`, label: 'Customization', icon: Palette },
-    { href: `/app/${appId}/integrations`, label: 'Integrations', icon: Share2 },
-    { href: `/app/${appId}/tools`, label: 'Tools', icon: Wrench },
-    { href: `/app/${appId}/team`, label: 'Team', icon: Users2 },
-    { href: `/app/${appId}/settings`, label: 'Settings', icon: Settings },
-  ];
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setTick(t => t + 1);
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const renderMenuItems = (items: any[]) => {
+    return items.map((item) => {
+      const href = item.href.replace('{appId}', appId);
+      return (
+        <SidebarMenuItem key={href}>
+            <Link href={href} passHref>
+                <SidebarMenuButton isActive={pathname === href} tooltip={item.label}>
+                    <item.icon />
+                    <span>{item.label}</span>
+                </SidebarMenuButton>
+            </Link>
+        </SidebarMenuItem>
+      )
+    });
+  }
 
   return (
     <Sidebar>
@@ -37,16 +74,26 @@ export function AppSidebar() {
         </SidebarHeader>
         <SidebarContent>
             <SidebarMenu>
-                {menuItems.map((item) => (
-                    <SidebarMenuItem key={item.href}>
-                        <Link href={item.href} passHref>
-                            <SidebarMenuButton isActive={pathname === item.href} tooltip={item.label}>
-                                <item.icon />
-                                <span>{item.label}</span>
-                            </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-                ))}
+                {renderMenuItems(coreMenuItems)}
+
+                <SidebarSeparator className="my-2"/>
+                
+                <SidebarMenuItem>
+                    <Link href={`/app/${appId}/tools`} passHref>
+                        <SidebarMenuButton isActive={pathname === `/app/${appId}/tools`} tooltip="Extensions">
+                            <Puzzle />
+                            <span>Extensions</span>
+                        </SidebarMenuButton>
+                    </Link>
+                </SidebarMenuItem>
+
+                {installedExtensions.length > 0 && <SidebarSeparator className="my-2" />}
+                
+                {renderMenuItems(availableExtensions.filter(ext => installedExtensions.includes(ext.id)))}
+
+                <SidebarSeparator className="my-2"/>
+
+                {renderMenuItems(managementMenuItems)}
             </SidebarMenu>
         </SidebarContent>
     </Sidebar>
