@@ -98,8 +98,6 @@ export default function ProductDetailPage() {
   
   const [isRedirectDialogOpen, setIsRedirectDialogOpen] = useState(false);
   
-  const isOutOfStock = product?.quantity !== null && product.quantity <= 0;
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => setUser(currentUser));
     return () => unsubscribe();
@@ -110,6 +108,7 @@ export default function ProductDetailPage() {
       setFinalPrice(product.price);
       removeCoupon();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product?.id]);
 
   useEffect(() => {
@@ -278,6 +277,8 @@ export default function ProductDetailPage() {
   if (!product) {
     return <div className="text-center py-20">Product not found.</div>;
   }
+
+  const isOutOfStock = product.quantity !== null && product.quantity <= 0;
 
   return (
     <div className="bg-background">
