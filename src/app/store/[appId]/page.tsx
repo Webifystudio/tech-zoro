@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowRight, MessageCircle, Instagram, PackageX } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface Product {
   id: string;
@@ -45,6 +47,7 @@ export default function StorefrontPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const appId = params.appId as string;
+  const { toast } = useToast();
     
   const [appData, setAppData] = useState<AppData | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -91,6 +94,18 @@ export default function StorefrontPage() {
         setFilteredProducts(products);
     }
   }, [searchParams, products]);
+  
+  const handleProductClick = (e: React.MouseEvent<HTMLAnchorElement>, isOutOfStock: boolean) => {
+    if (isOutOfStock) {
+      e.preventDefault();
+      toast({
+        variant: "destructive",
+        title: "Out of Stock",
+        description: "This item is currently unavailable.",
+      });
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -161,7 +176,13 @@ export default function StorefrontPage() {
               {productsToShow.map(product => {
                 const isOutOfStock = product.quantity !== null && product.quantity <= 0;
                 return (
-                  <Link key={product.id} href={`/store/${appId}/product/${product.id}`} className="block">
+                  <Link 
+                    key={product.id} 
+                    href={`/store/${appId}/product/${product.id}`} 
+                    className={cn("block", isOutOfStock && 'cursor-not-allowed')}
+                    onClick={(e) => handleProductClick(e, isOutOfStock)}
+                    aria-disabled={isOutOfStock}
+                  >
                     <div className="bg-background rounded-lg border overflow-hidden flex flex-col group transition-all hover:shadow-xl hover:-translate-y-1 h-full">
                       <div className="relative h-56 w-full overflow-hidden">
                         <Image src={product.imageUrl} layout="fill" objectFit="cover" alt={product.name} className="group-hover:scale-105 transition-transform duration-300"/>
