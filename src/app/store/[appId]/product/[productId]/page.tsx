@@ -83,7 +83,7 @@ export default function ProductDetailPage() {
   const [isWishlisted, setIsWishlisted] = useState(false);
   
   const { cartItems, addToCart, removeFromCart } = useCart();
-  const isInCart = cartItems.some(item => item.id === product?.id);
+  const isInCart = product ? cartItems.some(item => item.id === product.id) : false;
 
   const [newReviewRating, setNewReviewRating] = useState(0);
   const [newReviewComment, setNewReviewComment] = useState('');
@@ -109,7 +109,7 @@ export default function ProductDetailPage() {
       setFinalPrice(product.price);
       removeCoupon();
     }
-  }, [product]);
+  }, [product?.id]);
 
   useEffect(() => {
     if (!appId || !productId || !db) return;
@@ -122,7 +122,9 @@ export default function ProductDetailPage() {
       try {
         const productSnap = await getDoc(productRef);
         if (productSnap.exists()) {
-          setProduct({ id: productSnap.id, ...productSnap.data() } as Product);
+          const productData = { id: productSnap.id, ...productSnap.data() } as Product;
+          setProduct(productData);
+          setFinalPrice(productData.price);
         }
 
         const appSnap = await getDoc(appRef);
