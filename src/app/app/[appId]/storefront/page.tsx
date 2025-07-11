@@ -11,12 +11,14 @@ import { Globe, Eye, Palette, Copy, Check, Timer, RefreshCw } from 'lucide-react
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 
+type LinkStatus = 'offline' | 'online' | 'expired';
+
 export default function StorefrontManagementPage() {
   const params = useParams();
   const appId = params.appId as string;
   const { toast } = useToast();
 
-  const [linkStatus, setLinkStatus] = useState<'offline' | 'online' | 'expired'>('offline');
+  const [linkStatus, setLinkStatus] = useState<LinkStatus>('offline');
   const [countdown, setCountdown] = useState(60);
   const [copied, setCopied] = useState(false);
   
@@ -26,25 +28,41 @@ export default function StorefrontManagementPage() {
     }
     return '';
   }, [appId]);
+  
+  const statusKey = useMemo(() => `storefront_status_${appId}`, [appId]);
+
+  // Sync state with localStorage on initial load
+  useEffect(() => {
+    const currentStatus = localStorage.getItem(statusKey) as LinkStatus | null;
+    if (currentStatus === 'online') {
+      setLinkStatus('online');
+    } else {
+      setLinkStatus(currentStatus || 'offline');
+    }
+  }, [statusKey]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (linkStatus === 'online' && countdown > 0) {
-      timer = setInterval(() => {
-        setCountdown((prev) => prev - 1);
-      }, 1000);
-    } else if (linkStatus === 'online' && countdown === 0) {
-      setLinkStatus('expired');
-      toast({
-        title: "Preview Link Expired",
-        description: "Your temporary storefront link has gone offline.",
-      });
+    if (linkStatus === 'online') {
+        if (countdown > 0) {
+            timer = setInterval(() => {
+                setCountdown((prev) => prev - 1);
+            }, 1000);
+        } else {
+            setLinkStatus('expired');
+            localStorage.setItem(statusKey, 'expired');
+            toast({
+                title: "Preview Link Expired",
+                description: "Your temporary storefront link has gone offline.",
+            });
+        }
     }
     return () => clearInterval(timer);
-  }, [linkStatus, countdown, toast]);
+  }, [linkStatus, countdown, toast, statusKey]);
 
   const handleStart = () => {
     setLinkStatus('online');
+    localStorage.setItem(statusKey, 'online');
     setCountdown(60);
   };
 

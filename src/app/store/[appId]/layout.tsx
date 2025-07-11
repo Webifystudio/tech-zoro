@@ -9,7 +9,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, ShoppingCart, User, X, Trash2 } from 'lucide-react';
+import { Search, ShoppingCart, User, X, Trash2, Globe, RefreshCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Footer } from '@/components/Footer';
@@ -53,6 +53,37 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const cartTotal = cartItems.reduce((total, item) => total + item.price, 0);
 
+  const [linkStatus, setLinkStatus] = useState<'offline' | 'online'>('offline');
+
+  useEffect(() => {
+    if (!appId) return;
+    
+    const checkStatus = () => {
+        const status = localStorage.getItem(`storefront_status_${appId}`);
+        if (status === 'online') {
+            setLinkStatus('online');
+        } else {
+            setLinkStatus('offline');
+        }
+    };
+    checkStatus();
+
+    const intervalId = setInterval(checkStatus, 1000); // Check every second
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === `storefront_status_${appId}`) {
+        checkStatus();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+        clearInterval(intervalId);
+        window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [appId]);
+
   useEffect(() => {
     if (!appId || !db) return;
     const unsub = onSnapshot(doc(db, 'apps', appId), (doc) => {
@@ -74,6 +105,30 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
       }
       setIsSearchExpanded(false);
   };
+
+  if (linkStatus === 'offline') {
+    return (
+        <div className="flex flex-col min-h-screen bg-muted/40">
+            <div className="flex-grow flex flex-col items-center justify-center text-center p-8">
+                 <Globe className="h-24 w-24 text-primary/30 mb-8" />
+                 <h1 className="text-4xl font-bold tracking-tight text-foreground">Store Preview is Offline</h1>
+                 <p className="mt-4 text-lg text-muted-foreground max-w-md">
+                     This is a temporary preview link that is not currently active.
+                 </p>
+                 <p className="mt-2 text-sm text-muted-foreground max-w-md">
+                     If you are the store owner, please go to your dashboard under <span className="font-semibold text-foreground">Storefront</span> and click "Start Preview" or "Renew Link" to activate it.
+                 </p>
+                 <Button asChild className="mt-8">
+                     <Link href={`/app/${appId}/storefront`}>
+                         <RefreshCw className="mr-2 h-4 w-4" />
+                         Go to Dashboard
+                     </Link>
+                 </Button>
+            </div>
+             <Footer />
+        </div>
+    )
+  }
 
   return (
     <div className="bg-muted/40 min-h-screen flex flex-col">
