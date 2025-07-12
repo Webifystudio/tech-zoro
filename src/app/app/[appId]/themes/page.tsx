@@ -2,39 +2,33 @@
 "use client";
 
 import { useState, useRef, useEffect, type ChangeEvent, useMemo } from 'react';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, Palette, Smartphone, Loader2, RefreshCw } from 'lucide-react';
+import { Palette, Smartphone, Loader2, RefreshCw } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useParams } from 'next/navigation';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { uploadImage } from '@/lib/imgbb';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface CustomizationSettings {
-  logoUrl: string | null;
-  coverUrl: string | null;
   primaryColor: string;
   fontFamily: string;
   theme: 'default' | 'dark' | 'matrix' | 'neon' | 'blurple' | 'midnight' | 'glass' | 'gradient';
 }
 
 const initialSettings: CustomizationSettings = {
-    logoUrl: null,
-    coverUrl: null,
     primaryColor: '#34D399',
     fontFamily: 'inter',
     theme: 'default',
 };
 
-export default function CustomizePage() {
+export default function ThemesPage() {
   const params = useParams();
   const appId = params.appId as string;
   const { toast } = useToast();
@@ -43,16 +37,7 @@ export default function CustomizePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [settings, setSettings] = useState<CustomizationSettings>(initialSettings);
   const [stagedSettings, setStagedSettings] = useState<CustomizationSettings>(initialSettings);
-
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const logoInputRef = useRef<HTMLInputElement>(null);
-  
-  const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
-  const coverInputRef = useRef<HTMLInputElement>(null);
   
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeKey, setIframeKey] = useState(Date.now());
@@ -65,61 +50,36 @@ export default function CustomizePage() {
   }, [appId]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-        setUser(currentUser)
-    });
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => setUser(currentUser));
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (appId) {
+    if (user && db && appId) {
       const fetchSettings = async () => {
         setIsLoading(true);
-        try {
-            const appDocRef = doc(db, 'apps', appId);
-            const appDocSnap = await getDoc(appDocRef);
-            if (appDocSnap.exists()) {
-                const appData = appDocSnap.data();
-                if (appData.customization) {
-                    const fetchedSettings = {
-                        ...initialSettings,
-                        ...appData.customization,
-                    };
-                    setSettings(fetchedSettings);
-                    setStagedSettings(fetchedSettings);
-                    setLogoPreview(fetchedSettings.logoUrl);
-                    setCoverPreview(fetchedSettings.coverUrl);
-                }
-            }
-        } catch (error) {
-            console.error("Failed to fetch settings:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not load customization settings.' });
-        } finally {
-            setIsLoading(false);
+        const appDocRef = doc(db, 'apps', appId);
+        const appDocSnap = await getDoc(appDocRef);
+        if (appDocSnap.exists()) {
+          const appData = appDocSnap.data();
+          if (appData.customization) {
+            const fetchedSettings = {
+              ...initialSettings,
+              ...appData.customization,
+            };
+            setStagedSettings(fetchedSettings);
+          }
         }
+        setIsLoading(false);
       };
       fetchSettings();
     }
-  }, [appId, toast]);
+  }, [user, appId]);
 
   useEffect(() => {
     const message = { type: 'theme-change', theme: stagedSettings.theme };
     iframeRef.current?.contentWindow?.postMessage(message, '*');
   }, [stagedSettings.theme]);
-
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>, type: 'logo' | 'cover') => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const previewUrl = URL.createObjectURL(file);
-      if (type === 'logo') {
-        setLogoFile(file);
-        setLogoPreview(previewUrl);
-      } else {
-        setCoverFile(file);
-        setCoverPreview(previewUrl);
-      }
-    }
-  };
 
   const handleInputChange = (field: keyof CustomizationSettings, value: string) => {
     setStagedSettings(prev => ({ ...prev, [field]: value }));
@@ -129,40 +89,11 @@ export default function CustomizePage() {
     if (!db || !appId) return;
     setIsSaving(true);
     try {
-      let updatedSettings = { ...stagedSettings };
-
-      if (logoFile) {
-        const base64Image = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(logoFile);
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = error => reject(error);
-        });
-        const result = await uploadImage(base64Image);
-        if(result.url) updatedSettings.logoUrl = result.url;
-        else throw new Error('Logo upload failed');
-      }
-
-      if (coverFile) {
-        const base64Image = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(coverFile);
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = error => reject(error);
-        });
-        const result = await uploadImage(base64Image);
-        if(result.url) updatedSettings.coverUrl = result.url;
-        else throw new Error('Cover upload failed');
-      }
-
       const appDocRef = doc(db, 'apps', appId);
-      await updateDoc(appDocRef, { customization: updatedSettings });
-      setSettings(updatedSettings);
-      setStagedSettings(updatedSettings);
-      setLogoFile(null);
-      setCoverFile(null);
+      await updateDoc(appDocRef, { customization: stagedSettings });
+      
       setIframeKey(Date.now()); // Reload iframe to show saved changes
-      toast({ title: "Customization saved!" });
+      toast({ title: "Theme saved!" });
 
     } catch (error: any) {
       toast({ variant: 'destructive', title: "Save failed", description: error.message });
@@ -177,7 +108,6 @@ export default function CustomizePage() {
               <Skeleton className="h-10 w-1/3" />
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
-                    <Skeleton className="h-64" />
                     <Skeleton className="h-80" />
                 </div>
                 <div className="lg:col-span-1">
@@ -191,49 +121,12 @@ export default function CustomizePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Store Customization</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Store Themes</h1>
         <p className="text-muted-foreground">Tailor the look and feel of your online store.</p>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         <div className="lg:col-span-2 space-y-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Branding</CardTitle>
-              <CardDescription>Upload your store's logo and cover image.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label>Store Logo</Label>
-                <input type="file" accept="image/*" ref={logoInputRef} onChange={(e) => handleFileChange(e, 'logo')} className="hidden" />
-                <Card className="aspect-square border-dashed flex items-center justify-center" onClick={() => logoInputRef.current?.click()}>
-                  {logoPreview ? (
-                     <Image src={logoPreview} alt="Logo preview" width={200} height={200} className="w-full h-full object-contain rounded-md p-4" />
-                  ) : (
-                    <div className="text-center cursor-pointer p-4">
-                      <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
-                      <p className="mt-2 text-sm text-muted-foreground">Click to upload logo</p>
-                    </div>
-                  )}
-                </Card>
-              </div>
-              <div className="space-y-2">
-                <Label>Cover Image</Label>
-                <input type="file" accept="image/*" ref={coverInputRef} onChange={(e) => handleFileChange(e, 'cover')} className="hidden" />
-                <Card className="aspect-square border-dashed flex items-center justify-center" onClick={() => coverInputRef.current?.click()}>
-                   {coverPreview ? (
-                     <Image src={coverPreview} alt="Cover preview" width={200} height={200} className="w-full h-full object-cover rounded-md" />
-                  ) : (
-                    <div className="text-center cursor-pointer p-4">
-                      <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
-                      <p className="mt-2 text-sm text-muted-foreground">Click to upload cover</p>
-                    </div>
-                  )}
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
-
           <Card>
             <CardHeader>
               <CardTitle>Theme & Style</CardTitle>

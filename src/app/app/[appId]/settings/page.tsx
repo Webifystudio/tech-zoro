@@ -1,20 +1,31 @@
 "use client";
 
-import type { FormEvent } from 'react';
-import { useState, useEffect } from 'react';
+import type { FormEvent, ChangeEvent } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useParams, useRouter } from 'next/navigation';
 
 import { auth, db } from '@/lib/firebase';
+import { uploadImage } from '@/lib/imgbb';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Copy } from 'lucide-react';
+import { Loader2, Copy, Upload } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+
+interface AppSettings {
+    name: string;
+    description: string;
+    branding: {
+        logoUrl: string | null;
+        coverUrl: string | null;
+    }
+}
 
 export default function AppSettingsPage() {
   const { toast } = useToast();
@@ -26,8 +37,19 @@ export default function AppSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
-  const [appName, setAppName] = useState('');
-  const [appDescription, setAppDescription] = useState('');
+  const [settings, setSettings] = useState<AppSettings>({
+    name: '',
+    description: '',
+    branding: { logoUrl: null, coverUrl: null }
+  });
+  
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
   const [publicUrl, setPublicUrl] = useState('');
 
   useEffect(() => {
@@ -62,8 +84,15 @@ export default function AppSettingsPage() {
             router.push('/');
             return;
           }
-          setAppName(appData.name || '');
-          setAppDescription(appData.description || '');
+          const currentSettings = {
+              name: appData.name || '',
+              description: appData.description || '',
+              branding: appData.branding || { logoUrl: null, coverUrl: null }
+          };
+          setSettings(currentSettings);
+          setLogoPreview(currentSettings.branding.logoUrl);
+          setCoverPreview(currentSettings.branding.coverUrl);
+
         } else {
           toast({ variant: 'destructive', title: 'App not found', description: 'The requested app does not exist.' });
           router.push('/');
@@ -79,17 +108,62 @@ export default function AppSettingsPage() {
     fetchAppData();
   }, [user, appId, router, toast]);
 
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>, type: 'logo' | 'cover') => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const previewUrl = URL.createObjectURL(file);
+      if (type === 'logo') {
+        setLogoFile(file);
+        setLogoPreview(previewUrl);
+      } else {
+        setCoverFile(file);
+        setCoverPreview(previewUrl);
+      }
+    }
+  };
+
   const handleSaveChanges = async (e: FormEvent) => {
     e.preventDefault();
     if (!db || !appId) return;
     setIsSaving(true);
 
     try {
+        let updatedBranding = { ...settings.branding };
+
+        if (logoFile) {
+            const base64Image = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(logoFile);
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = error => reject(error);
+            });
+            const result = await uploadImage(base64Image);
+            if(result.url) updatedBranding.logoUrl = result.url;
+            else throw new Error('Logo upload failed');
+        }
+
+        if (coverFile) {
+            const base64Image = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(coverFile);
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = error => reject(error);
+            });
+            const result = await uploadImage(base64Image);
+            if(result.url) updatedBranding.coverUrl = result.url;
+            else throw new Error('Cover upload failed');
+        }
+
+
       const appDocRef = doc(db, 'apps', appId);
       await updateDoc(appDocRef, {
-        name: appName,
-        description: appDescription,
+        name: settings.name,
+        description: settings.description,
+        branding: updatedBranding,
       });
+      
+      setLogoFile(null);
+      setCoverFile(null);
       
       toast({
         title: 'Settings Saved',
@@ -146,65 +220,101 @@ export default function AppSettingsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">App Settings</h1>
-          <p className="text-muted-foreground">Manage your application's configuration and public details.</p>
-      </div>
+    <form onSubmit={handleSaveChanges}>
+        <div className="space-y-8">
+        <div className="flex items-center justify-between">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">App Settings</h1>
+                <p className="text-muted-foreground">Manage your application's configuration and public details.</p>
+            </div>
+            <Button type="submit" disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Changes
+            </Button>
+        </div>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <Card>
-            <form onSubmit={handleSaveChanges}>
-              <CardHeader>
-                <CardTitle>General Settings</CardTitle>
-                <CardDescription>Update your app's public information.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+        <div className="grid gap-8 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-8">
+            <Card>
+                <CardHeader>
+                    <CardTitle>General Settings</CardTitle>
+                    <CardDescription>Update your app's public information.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                    <Label htmlFor="appName">Website Name</Label>
+                    <Input
+                        id="appName"
+                        value={settings.name}
+                        onChange={(e) => setSettings(s => ({...s, name: e.target.value}))}
+                    />
+                    </div>
+                    <div className="space-y-2">
+                    <Label htmlFor="appDescription">Website Description</Label>
+                    <Textarea
+                        id="appDescription"
+                        value={settings.description}
+                        onChange={(e) => setSettings(s => ({...s, description: e.target.value}))}
+                        placeholder="Tell us about your website"
+                    />
+                    </div>
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader>
+                <CardTitle>Branding</CardTitle>
+                <CardDescription>Upload your store's logo and cover image.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="appName">Website Name</Label>
-                  <Input
-                    id="appName"
-                    value={appName}
-                    onChange={(e) => setAppName(e.target.value)}
-                  />
+                    <Label>Store Logo</Label>
+                    <input type="file" accept="image/*" ref={logoInputRef} onChange={(e) => handleFileChange(e, 'logo')} className="hidden" />
+                    <Card className="aspect-square border-dashed flex items-center justify-center" onClick={() => logoInputRef.current?.click()}>
+                    {logoPreview ? (
+                        <Image src={logoPreview} alt="Logo preview" width={200} height={200} className="w-full h-full object-contain rounded-md p-4" />
+                    ) : (
+                        <div className="text-center cursor-pointer p-4">
+                        <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <p className="mt-2 text-sm text-muted-foreground">Click to upload logo</p>
+                        </div>
+                    )}
+                    </Card>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="appDescription">Website Description</Label>
-                  <Textarea
-                    id="appDescription"
-                    value={appDescription}
-                    onChange={(e) => setAppDescription(e.target.value)}
-                    placeholder="Tell us about your website"
-                  />
+                    <Label>Cover Image</Label>
+                    <input type="file" accept="image/*" ref={coverInputRef} onChange={(e) => handleFileChange(e, 'cover')} className="hidden" />
+                    <Card className="aspect-square border-dashed flex items-center justify-center" onClick={() => coverInputRef.current?.click()}>
+                    {coverPreview ? (
+                        <Image src={coverPreview} alt="Cover preview" width={200} height={200} className="w-full h-full object-cover rounded-md" />
+                    ) : (
+                        <div className="text-center cursor-pointer p-4">
+                        <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <p className="mt-2 text-sm text-muted-foreground">Click to upload cover</p>
+                        </div>
+                    )}
+                    </Card>
                 </div>
-              </CardContent>
-              <CardFooter className="border-t px-6 py-4">
-                <Button type="submit" disabled={isSaving}>
-                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Changes
-                </Button>
-              </CardFooter>
-            </form>
-          </Card>
+                </CardContent>
+            </Card>
+            </div>
+            <div className="lg:col-span-1 space-y-8">
+            <Card>
+                <CardHeader>
+                <CardTitle>Share Your Store</CardTitle>
+                <CardDescription>This is the public link to your storefront.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                <div className="flex gap-2">
+                    <Input value={publicUrl} readOnly />
+                    <Button type="button" variant="outline" size="icon" onClick={handleCopyLink} aria-label="Copy public URL">
+                    <Copy className="h-4 w-4" />
+                    </Button>
+                </div>
+                </CardContent>
+            </Card>
+            </div>
         </div>
-        <div className="lg:col-span-1 space-y-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Share Your Store</CardTitle>
-              <CardDescription>This is the public link to your storefront.</CardDescription>
-            </CardHeader>
-            <CardContent>
-               <div className="flex gap-2">
-                <Input value={publicUrl} readOnly />
-                <Button variant="outline" size="icon" onClick={handleCopyLink} aria-label="Copy public URL">
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
         </div>
-      </div>
-    </div>
+    </form>
   );
 }

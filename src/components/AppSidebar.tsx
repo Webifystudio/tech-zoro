@@ -2,7 +2,7 @@
 "use client";
 
 import { Sidebar, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarContent, SidebarSeparator } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, Globe, LayoutGrid, ShoppingBag, BarChart3, Megaphone, Palette, Wrench, Users2, ClipboardList, Share2, PackageX, Puzzle, Ticket, QrCode, FileText } from 'lucide-react';
+import { LayoutDashboard, Settings, Globe, LayoutGrid, ShoppingBag, BarChart3, Megaphone, Palette, Wrench, Users2, ClipboardList, Share2, PackageX, Puzzle, Ticket, QrCode, FileText, Component } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
 import { useLocalStorage } from '@/hooks/use-local-storage';
@@ -20,8 +20,8 @@ const coreMenuItems = [
 
 const managementMenuItems = [
     { href: `/app/{appId}/pages`, label: 'Pages', icon: FileText },
+    { href: `/app/{appId}/themes`, label: 'Themes', icon: Palette },
     { href: `/app/{appId}/marketing`, label: 'Marketing', icon: Megaphone },
-    { href: `/app/{appId}/customize`, label: 'Customize', icon: Palette },
     { href: `/app/{appId}/integrations`, label: 'Integrations', icon: Share2 },
     { href: `/app/{appId}/team`, label: 'Team', icon: Users2 },
     { href: `/app/{appId}/settings`, label: 'Settings', icon: Settings },
