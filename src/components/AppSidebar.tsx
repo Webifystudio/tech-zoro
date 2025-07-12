@@ -36,13 +36,15 @@ export function AppSidebar() {
   const params = useParams();
   const appId = params.appId as string;
   
-  // We use a state to force re-render on storage change
   const [installedExtensions] = useLocalStorage<string[]>(`installed_extensions_${appId}`, ['coupons']);
-  const [_, setTick] = useState(0);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
+    // This effect listens for storage changes to update the sidebar if an extension is installed in another tab.
     const handleStorageChange = () => {
-      setTick(t => t + 1);
+      // Force a re-render by updating a dummy state
+       window.location.reload();
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
@@ -63,6 +65,8 @@ export function AppSidebar() {
       )
     });
   }
+
+  const extensionsToRender = isClient ? availableExtensions.filter(ext => installedExtensions.includes(ext.id)) : [];
 
   return (
     <Sidebar>
@@ -86,7 +90,7 @@ export function AppSidebar() {
                     </Link>
                 </SidebarMenuItem>
 
-                {renderMenuItems(availableExtensions.filter(ext => installedExtensions.includes(ext.id)))}
+                {isClient && renderMenuItems(extensionsToRender)}
 
                 <SidebarSeparator className="my-2"/>
 
