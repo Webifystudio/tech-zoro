@@ -23,7 +23,7 @@ interface CustomizationSettings {
   coverUrl: string | null;
   primaryColor: string;
   fontFamily: string;
-  theme: 'default' | 'dark' | 'matrix' | 'neon';
+  theme: 'default' | 'dark' | 'matrix' | 'neon' | 'blurple' | 'midnight';
 }
 
 export default function CustomizationPage() {
@@ -241,6 +241,8 @@ export default function CustomizationPage() {
                           <SelectItem value="dark">Dark</SelectItem>
                           <SelectItem value="matrix">Matrix</SelectItem>
                           <SelectItem value="neon">Neon</SelectItem>
+                          <SelectItem value="blurple">Blurple</SelectItem>
+                          <SelectItem value="midnight">Midnight</SelectItem>
                       </SelectContent>
                   </Select>
               </div>
@@ -319,5 +321,3 @@ export default function CustomizationPage() {
     </div>
   );
 }
-
-    

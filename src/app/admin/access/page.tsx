@@ -40,7 +40,7 @@ export default function AccessControlPage() {
 
   useEffect(() => {
     if (!db) return;
-    const q = query(collection(db, 'apps'), where('isPublic', '==', true), orderBy('publishedAt', 'desc'));
+    const q = query(collection(db, 'apps'), where('isPublic', '==', true));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const apps = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -48,12 +48,19 @@ export default function AccessControlPage() {
         appName: doc.data().name,
         ownerEmail: doc.data().ownerEmail || 'Unknown',
         publishedAt: doc.data().publishedAt,
-      })) as PublishedApp[];
+      })).filter(app => app.publishedAt) as PublishedApp[];
+      
+      apps.sort((a, b) => b.publishedAt.seconds - a.publishedAt.seconds);
+      
       setPublishedApps(apps);
       setIsLoadingApps(false);
+    }, (error) => {
+        console.error("Error fetching published apps: ", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not load published applications.' });
+        setIsLoadingApps(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [toast]);
 
   const handleSearchApp = async (e: React.FormEvent) => {
     e.preventDefault();

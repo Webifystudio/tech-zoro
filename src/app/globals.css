@@ -115,6 +115,50 @@
     --input: 258 53% 20%;
     --ring: 330 100% 71%;
   }
+  [data-theme="blurple"] {
+    --background: 235 86% 25%; /* Slightly lighter than card */
+    --foreground: 235 86% 95%;
+    --card: 235 86% 19%;
+    --card-foreground: 235 86% 95%;
+    --popover: 235 86% 19%;
+    --popover-foreground: 235 86% 95%;
+    --primary: 235 86% 77%;
+    --primary-foreground: 235 86% 15%;
+    --secondary: 235 86% 32%;
+    --secondary-foreground: 235 86% 95%;
+    --muted: 235 86% 32%;
+    --muted-foreground: 235 86% 80%;
+    --accent: 235 86% 77%;
+    --accent-foreground: 235 86% 15%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 235 86% 32%;
+    --input: 235 86% 32%;
+    --ring: 235 86% 77%;
+  }
+
+  [data-theme="midnight"] {
+    --background: 240 10% 3.9%;
+    --foreground: 210 40% 98%;
+    --card: 240 5.9% 10%;
+    --card-foreground: 210 40% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 217 91% 60%;
+  }
+
 }
 
 @layer base {
@@ -125,5 +169,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-    
