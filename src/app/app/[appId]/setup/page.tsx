@@ -183,4 +183,3 @@ export default function SetupPage() {
             </div>
         </form>
     );
-}
