@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, orderBy, writeBatch } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, orderBy, writeBatch, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -13,10 +13,11 @@ import { Loader2, Search, MoreHorizontal, Trash2, StopCircle } from 'lucide-reac
 import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
-interface User {
-  uid: string;
-  email: string;
-  displayName: string;
+interface FoundApp {
+  id: string; // doc id
+  name: string;
+  ownerId: string;
+  ownerEmail?: string;
 }
 
 interface PublishedApp {
@@ -29,9 +30,8 @@ interface PublishedApp {
 
 export default function AccessControlPage() {
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [foundUser, setFoundUser] = useState<User | null>(null);
-  const [appId, setAppId] = useState('');
+  const [appIdSearch, setAppIdSearch] = useState('');
+  const [foundApp, setFoundApp] = useState<FoundApp | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isGranting, setIsGranting] = useState(false);
   
@@ -55,40 +55,55 @@ export default function AccessControlPage() {
     return () => unsubscribe();
   }, []);
 
-  const handleSearchUser = async (e: React.FormEvent) => {
+  const handleSearchApp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || !searchTerm) return;
+    if (!db || !appIdSearch) return;
     setIsSearching(true);
-    setFoundUser(null);
+    setFoundApp(null);
     try {
-      const q = query(collection(db, 'users'), where('email', '==', searchTerm));
-      const querySnapshot = await getDocs(q);
-      if (querySnapshot.empty) {
-        toast({ variant: 'destructive', title: 'User not found' });
+      const appRef = doc(db, 'apps', appIdSearch);
+      const appSnap = await getDoc(appRef);
+
+      if (!appSnap.exists()) {
+        toast({ variant: 'destructive', title: 'App not found' });
       } else {
-        const userData = querySnapshot.docs[0].data() as User;
-        setFoundUser({ ...userData, uid: querySnapshot.docs[0].id });
+        const appData = appSnap.data();
+        let ownerEmail = appData.ownerEmail;
+
+        if (!ownerEmail && appData.ownerId) {
+          const userRef = doc(db, 'users', appData.ownerId);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            ownerEmail = userSnap.data().email;
+          }
+        }
+        
+        setFoundApp({
+            id: appSnap.id,
+            name: appData.name,
+            ownerId: appData.ownerId,
+            ownerEmail: ownerEmail || 'Not found',
+        });
       }
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error searching user', description: error.message });
+      toast({ variant: 'destructive', title: 'Error searching app', description: error.message });
     } finally {
       setIsSearching(false);
     }
   };
 
   const handleGrantAccess = async () => {
-    if (!db || !appId || !foundUser) return;
+    if (!db || !foundApp) return;
     setIsGranting(true);
     try {
-      const appRef = doc(db, 'apps', appId);
+      const appRef = doc(db, 'apps', foundApp.id);
       await updateDoc(appRef, {
         canBePublic: true,
-        ownerEmail: foundUser.email // Store email for display
+        ownerEmail: foundApp.ownerEmail
       });
-      toast({ title: 'Access Granted', description: `${foundUser.email} can now publish app ${appId}.` });
-      setFoundUser(null);
-      setSearchTerm('');
-      setAppId('');
+      toast({ title: 'Access Granted', description: `User ${foundApp.ownerEmail} can now publish app ${foundApp.name}.` });
+      setFoundApp(null);
+      setAppIdSearch('');
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Failed to grant access', description: error.message });
     } finally {
@@ -129,34 +144,30 @@ export default function AccessControlPage() {
       <Card>
         <CardHeader>
           <CardTitle>Grant Publishing Access</CardTitle>
-          <CardDescription>Search for a user by email to grant them the ability to publish an app.</CardDescription>
+          <CardDescription>Search for an application by its ID to grant publishing rights.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSearchUser} className="flex gap-2">
+          <form onSubmit={handleSearchApp} className="flex gap-2">
             <Input
-              placeholder="user@example.com"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Enter App ID..."
+              value={appIdSearch}
+              onChange={(e) => setAppIdSearch(e.target.value)}
             />
             <Button type="submit" disabled={isSearching}>
               {isSearching && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Search User
+              Search App
             </Button>
           </form>
-          {foundUser && (
+          {foundApp && (
             <div className="mt-6 p-4 border rounded-lg bg-muted/50 space-y-4">
-              <p>Found user: <span className="font-semibold">{foundUser.displayName}</span> ({foundUser.email})</p>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Enter App ID to grant access"
-                  value={appId}
-                  onChange={(e) => setAppId(e.target.value)}
-                />
-                <Button onClick={handleGrantAccess} disabled={isGranting || !appId}>
-                  {isGranting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Give Access
-                </Button>
+              <div>
+                <p>App Name: <span className="font-semibold">{foundApp.name}</span></p>
+                <p>Owner Email: <span className="font-semibold">{foundApp.ownerEmail}</span></p>
               </div>
+              <Button onClick={handleGrantAccess} disabled={isGranting}>
+                {isGranting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Give Access
+              </Button>
             </div>
           )}
         </CardContent>
@@ -185,7 +196,7 @@ export default function AccessControlPage() {
                            <TableRow key={app.id}>
                                <TableCell className="font-medium">{app.appName}</TableCell>
                                <TableCell>{app.ownerEmail}</TableCell>
-                               <TableCell>{app.publishedAt ? format(app.publishedAt.toDate(), 'PPP p') : 'N/A'}</TableCell>
+                               <TableCell>{app.publishedAt ? format(new Date(app.publishedAt.seconds * 1000), 'PPP p') : 'N/A'}</TableCell>
                                <TableCell className="text-right">
                                    <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
