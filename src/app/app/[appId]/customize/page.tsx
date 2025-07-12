@@ -26,6 +26,14 @@ interface CustomizationSettings {
   theme: 'default' | 'dark' | 'matrix' | 'neon' | 'blurple' | 'midnight' | 'glass' | 'gradient';
 }
 
+const initialSettings: CustomizationSettings = {
+    logoUrl: null,
+    coverUrl: null,
+    primaryColor: '#34D399',
+    fontFamily: 'inter',
+    theme: 'default',
+};
+
 export default function CustomizePage() {
   const params = useParams();
   const appId = params.appId as string;
@@ -35,15 +43,8 @@ export default function CustomizePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [settings, setSettings] = useState<CustomizationSettings>({
-    logoUrl: null,
-    coverUrl: null,
-    primaryColor: '#34D399',
-    fontFamily: 'inter',
-    theme: 'default',
-  });
-  
-  const [stagedSettings, setStagedSettings] = useState<CustomizationSettings>(settings);
+  const [settings, setSettings] = useState<CustomizationSettings>(initialSettings);
+  const [stagedSettings, setStagedSettings] = useState<CustomizationSettings>(initialSettings);
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -64,37 +65,42 @@ export default function CustomizePage() {
   }, [appId]);
 
   useEffect(() => {
-    onAuthStateChanged(auth, (currentUser) => setUser(currentUser));
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser)
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (user && db && appId) {
+    if (appId) {
       const fetchSettings = async () => {
         setIsLoading(true);
-        const appDocRef = doc(db, 'apps', appId);
-        const appDocSnap = await getDoc(appDocRef);
-        if (appDocSnap.exists()) {
-          const appData = appDocSnap.data();
-          if (appData.customization) {
-            const fetchedSettings = {
-              logoUrl: null,
-              coverUrl: null,
-              primaryColor: '#34D399',
-              fontFamily: 'inter',
-              theme: 'default',
-              ...appData.customization,
-            };
-            setSettings(fetchedSettings);
-            setStagedSettings(fetchedSettings);
-            setLogoPreview(fetchedSettings.logoUrl);
-            setCoverPreview(fetchedSettings.coverUrl);
-          }
+        try {
+            const appDocRef = doc(db, 'apps', appId);
+            const appDocSnap = await getDoc(appDocRef);
+            if (appDocSnap.exists()) {
+                const appData = appDocSnap.data();
+                if (appData.customization) {
+                    const fetchedSettings = {
+                        ...initialSettings,
+                        ...appData.customization,
+                    };
+                    setSettings(fetchedSettings);
+                    setStagedSettings(fetchedSettings);
+                    setLogoPreview(fetchedSettings.logoUrl);
+                    setCoverPreview(fetchedSettings.coverUrl);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to fetch settings:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not load customization settings.' });
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
       };
       fetchSettings();
     }
-  }, [user, appId]);
+  }, [appId, toast]);
 
   useEffect(() => {
     const message = { type: 'theme-change', theme: stagedSettings.theme };
