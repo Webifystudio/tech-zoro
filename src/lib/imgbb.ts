@@ -2,15 +2,9 @@
 'use server';
 
 export async function uploadImage(
-  base64Image: string
+  formData: FormData
 ): Promise<{url: string; error?: undefined} | {error: string; url?: undefined}> {
   const apiKey = '2bb2346a6a907388d8a3b0beac2bca86';
-  
-  // Remove the data URI prefix if it exists
-  const base64Data = base64Image.split(',')[1] || base64Image;
-
-  const formData = new FormData();
-  formData.append('image', base64Data);
 
   try {
     const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {

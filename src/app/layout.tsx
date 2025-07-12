@@ -1,18 +1,25 @@
-import type {Metadata} from 'next';
+
+"use client";
+
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
-
-export const metadata: Metadata = {
-  title: 'ZORO',
-  description: 'A website named ZORO with user login and registration functionality',
-};
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import { usePathname } from 'next/navigation';
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [isGlassEffectEnabled] = useLocalStorage('glass-effect-enabled', false);
+  const pathname = usePathname();
+
+  const isStorePath = pathname.startsWith('/store');
+  const isAuthPath = pathname === '/login' || pathname === '/register';
+
+  const shouldApplyGlassEffect = isGlassEffectEnabled && !isStorePath && !isAuthPath;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -20,7 +27,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></link>
       </head>
-      <body className="antialiased flex min-h-screen flex-col bg-background">
+      <body className="antialiased flex min-h-screen flex-col bg-background" data-theme={shouldApplyGlassEffect ? 'glass' : undefined}>
         <ThemeProvider
             attribute="class"
             defaultTheme="system"

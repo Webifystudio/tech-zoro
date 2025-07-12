@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ChangeEvent, FormEvent } from 'react';
@@ -17,6 +18,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2, Upload, Camera } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import { Separator } from '@/components/ui/separator';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -35,6 +39,8 @@ export default function ProfilePage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   
   const [apps, setApps] = useState<{ id: string; name: string }[]>([]);
+
+  const [isGlassEffectEnabled, setIsGlassEffectEnabled] = useLocalStorage('glass-effect-enabled', false);
 
   useEffect(() => {
     if (!isFirebaseConfigured || !auth) {
@@ -94,7 +100,7 @@ export default function ProfilePage() {
       if (avatarFile) {
         const formData = new FormData();
         formData.append('image', avatarFile);
-        const result = await uploadImage(formData);
+        const result = await uploadImage(formData as any);
         if (result.url) {
           avatarUrl = result.url;
         } else {
@@ -105,7 +111,7 @@ export default function ProfilePage() {
       if (bannerFile) {
         const formData = new FormData();
         formData.append('image', bannerFile);
-        const result = await uploadImage(formData);
+        const result = await uploadImage(formData as any);
         if (result.url) {
           bannerUrl = result.url;
           // In a real app, you would save this bannerUrl to your user profile in a database.
@@ -152,7 +158,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-muted/40">
-      <header className="sticky top-0 z-10 bg-background border-b p-4 flex justify-between items-center">
+      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b p-4 flex justify-between items-center">
         <Link href="/">
            <h1 className="text-2xl font-bold tracking-tight text-primary cursor-pointer" style={{fontFamily: "'Brush Script MT', 'Cursive'"}}>ZORO</h1>
         </Link>
@@ -213,6 +219,30 @@ export default function ProfilePage() {
                   placeholder="Your display name"
                 />
               </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                 <h3 className="text-lg font-semibold">Theme Settings</h3>
+                 <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="glass-effect" className="text-base">
+                        Enable Glass Effect
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Apply a frosted glass theme to your dashboard.
+                      </p>
+                    </div>
+                    <Switch
+                      id="glass-effect"
+                      checked={isGlassEffectEnabled}
+                      onCheckedChange={setIsGlassEffectEnabled}
+                    />
+                  </div>
+              </div>
+
+              <Separator />
+
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">My Apps</h3>
                 {apps.length > 0 ? (
@@ -229,7 +259,7 @@ export default function ProfilePage() {
                   <p className="text-sm text-muted-foreground">You haven't created any apps yet. <Link href="/" className="text-primary hover:underline">Create one now!</Link></p>
                 )}
               </div>
-              <CardFooter className="p-0 flex justify-end">
+              <CardFooter className="p-0 pt-6 flex justify-end">
                 <Button type="submit" disabled={isSaving}>
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Changes
