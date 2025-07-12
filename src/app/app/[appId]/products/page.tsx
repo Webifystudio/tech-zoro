@@ -20,6 +20,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, PlusCircle, Trash2, Upload, Instagram, MessageCircle, ShoppingBag, Link as LinkIcon } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 
 interface Product {
   id: string;
@@ -31,7 +34,13 @@ interface Product {
   platform: 'instagram' | 'whatsapp' | 'affiliate';
   instagramPostUrl?: string;
   affiliateUrl?: string;
+  categories?: string[];
   createdAt: { seconds: number; nanoseconds: number; } | null;
+}
+
+interface Category {
+  id: string;
+  name: string;
 }
 
 const platformIcons = {
@@ -46,6 +55,7 @@ export default function ProductsPage() {
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -55,7 +65,8 @@ export default function ProductsPage() {
   const [productDesc, setProductDesc] = useState('');
   const [productPrice, setProductPrice] = useState('');
   const [productQuantity, setProductQuantity] = useState('');
-  const [productPlatform, setProductPlatform] = useState('');
+  const [productPlatform, setProductPlatform] = useState<Product['platform'] | ''>('');
+  const [productCategories, setProductCategories] = useState<string[]>([]);
   const [instagramPostUrl, setInstagramPostUrl] = useState('');
   const [affiliateUrl, setAffiliateUrl] = useState('');
   const [productImageFile, setProductImageFile] = useState<File | null>(null);
@@ -73,7 +84,7 @@ export default function ProductsPage() {
     if (user && db && appId) {
       const q = query(collection(db, "apps", appId, "products"), orderBy("createdAt", "desc"));
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const userProducts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Product[];
+        const userProducts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Product);
         setProducts(userProducts);
         setIsLoading(false);
       }, (error) => {
@@ -81,7 +92,16 @@ export default function ProductsPage() {
         toast({ variant: "destructive", title: "Error", description: "Could not fetch products." });
         setIsLoading(false);
       });
-      return () => unsubscribe();
+
+      const catQuery = query(collection(db, "apps", appId, "categories"), orderBy("name"));
+      const unsubCategories = onSnapshot(catQuery, (snapshot) => {
+        setCategories(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
+      });
+
+      return () => {
+        unsubscribe();
+        unsubCategories();
+      };
     } else {
         setIsLoading(false);
     }
@@ -101,6 +121,7 @@ export default function ProductsPage() {
       setProductPrice('');
       setProductQuantity('');
       setProductPlatform('');
+      setProductCategories([]);
       setInstagramPostUrl('');
       setAffiliateUrl('');
       setProductImageFile(null);
@@ -135,6 +156,7 @@ export default function ProductsPage() {
             price: parseFloat(productPrice),
             quantity: productQuantity.trim() === '' ? null : parseInt(productQuantity, 10),
             platform: productPlatform,
+            categories: productCategories,
             imageUrl: result.url,
             createdAt: serverTimestamp(),
           };
@@ -173,6 +195,12 @@ export default function ProductsPage() {
        toast({ variant: "destructive", title: "Failed to delete product", description: error.message });
     }
   };
+
+  const toggleCategory = (categoryId: string) => {
+    setProductCategories(prev => 
+      prev.includes(categoryId) ? prev.filter(id => id !== categoryId) : [...prev, categoryId]
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -216,8 +244,28 @@ export default function ProductsPage() {
                         </div>
                    </div>
                    <div className="space-y-2">
+                     <Label>Categories</Label>
+                     <Popover>
+                        <PopoverTrigger asChild>
+                           <Button variant="outline" className="w-full justify-start font-normal">
+                             {productCategories.length > 0 ? `${productCategories.length} selected` : "Select categories"}
+                           </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                           <div className="p-2 space-y-1">
+                              {categories.map(cat => (
+                                 <div key={cat.id} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted cursor-pointer" onClick={() => toggleCategory(cat.id)}>
+                                     <Checkbox id={`cat-${cat.id}`} checked={productCategories.includes(cat.id)} />
+                                     <Label htmlFor={`cat-${cat.id}`} className="cursor-pointer">{cat.name}</Label>
+                                 </div>
+                              ))}
+                           </div>
+                        </PopoverContent>
+                     </Popover>
+                   </div>
+                   <div className="space-y-2">
                        <Label htmlFor="productPlatform">Sell Platform</Label>
-                       <Select onValueChange={setProductPlatform} value={productPlatform} required>
+                       <Select onValueChange={(v) => setProductPlatform(v as any)} value={productPlatform} required>
                            <SelectTrigger id="productPlatform">
                                <SelectValue placeholder="Select a platform" />
                            </SelectTrigger>
@@ -301,6 +349,12 @@ export default function ProductsPage() {
                 </CardContent>
                 <CardHeader>
                     <CardTitle className="truncate">{product.name}</CardTitle>
+                     <div className="flex flex-wrap gap-1">
+                        {product.categories?.map(catId => {
+                            const cat = categories.find(c => c.id === catId);
+                            return cat ? <Badge key={catId} variant="secondary">{cat.name}</Badge> : null;
+                        })}
+                    </div>
                     <div className="flex justify-between items-center">
                       <p className="font-semibold text-lg text-primary">₹{parseFloat(String(product.price)).toFixed(2)}</p>
                       <p className="text-sm text-muted-foreground">

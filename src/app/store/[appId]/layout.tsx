@@ -5,11 +5,11 @@ import { useState, useEffect, useRef, type ReactNode, useMemo } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, ShoppingCart, User, X, Trash2, Globe, RefreshCw } from 'lucide-react';
+import { Search, ShoppingCart, User, X, Trash2, Globe, RefreshCw, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Footer } from '@/components/Footer';
@@ -18,6 +18,7 @@ import { CartProvider, useCart } from '@/context/CartProvider';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter, SheetClose } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface AppData {
   name: string;
@@ -48,7 +49,6 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
   const [appData, setAppData] = useState<AppData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { cartItems, removeFromCart, clearCart } = useCart();
@@ -60,6 +60,12 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
   
   const statusKey = useMemo(() => `storefront_status_${appId}`, [appId]);
   const isPubliclyHosted = appData?.isPublic === true;
+  
+  // Search state
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
+  const [suggestions, setSuggestions] = useState<Product[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isSuggestionPopoverOpen, setIsSuggestionPopoverOpen] = useState(false);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -74,7 +80,6 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!appId) return;
     
-    // This is for the temporary preview link
     const checkPreviewStatus = () => {
         const status = localStorage.getItem(statusKey);
         const startTime = localStorage.getItem(`${statusKey}_start_time`);
@@ -89,7 +94,7 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
     };
     checkPreviewStatus();
 
-    const intervalId = setInterval(checkPreviewStatus, 5000); // Check every 5 seconds
+    const intervalId = setInterval(checkPreviewStatus, 5000);
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === statusKey) checkPreviewStatus();
     };
@@ -113,7 +118,6 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
           document.documentElement.dataset.theme = data.customization.theme;
         }
       } else {
-        // App not found, treat as offline
         setAppData(null);
       }
       setIsLoading(false);
@@ -121,15 +125,36 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
     return () => unsub();
   }, [appId]);
 
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setSuggestions([]);
+      setIsSuggestionPopoverOpen(false);
+      return;
+    }
+
+    setIsSearching(true);
+    setIsSuggestionPopoverOpen(true);
+    const q = query(
+      collection(db, 'apps', appId, 'products'),
+      where('name', '>=', searchTerm),
+      where('name', '<=', searchTerm + '\uf8ff'),
+      limit(5)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setSuggestions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
+      setIsSearching(false);
+    });
+
+    return () => unsubscribe();
+  }, [searchTerm, appId]);
+
   const handleSearchSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      const encodedSearchTerm = encodeURIComponent(searchTerm.trim());
-      if (encodedSearchTerm) {
-          router.push(`/store/${appId}?search=${encodedSearchTerm}`);
-      } else {
-          router.push(`/store/${appId}`);
-      }
-      setIsSearchExpanded(false);
+      setIsSuggestionPopoverOpen(false);
+      const newParams = new URLSearchParams(searchParams.toString());
+      newParams.set('q', searchTerm.trim());
+      router.push(`/store/${appId}/products?${newParams.toString()}`);
   };
 
   const isStoreAccessible = isPubliclyHosted || linkStatus === 'online';
@@ -186,20 +211,41 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
             </div>
 
             <div className={cn("flex-1 w-full transition-all duration-300", isSearchExpanded ? "max-w-full" : "max-w-xs sm:max-w-sm md:max-w-md lg:max-w-2xl")}>
-              <form className="relative" onSubmit={handleSearchSubmit}>
-                <Input 
-                  ref={searchInputRef}
-                  placeholder="Search products, brands and more..." 
-                  className="pl-5 pr-12 h-12 rounded-full w-full" 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onFocus={() => setIsSearchExpanded(true)}
-                />
-                 <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full" type="button" onClick={() => searchInputRef.current?.focus()}>
-                    <Search className="h-5 w-5 text-muted-foreground" />
-                    <span className="sr-only">Search</span>
-                </Button>
-              </form>
+              <Popover open={isSuggestionPopoverOpen} onOpenChange={setIsSuggestionPopoverOpen}>
+                  <PopoverTrigger asChild>
+                      <form className="relative" onSubmit={handleSearchSubmit}>
+                        <Input 
+                          ref={searchInputRef}
+                          placeholder="Search products, brands and more..." 
+                          className="pl-5 pr-12 h-12 rounded-full w-full" 
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          onFocus={() => setIsSearchExpanded(true)}
+                        />
+                         <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full" type="submit">
+                            <Search className="h-5 w-5 text-muted-foreground" />
+                            <span className="sr-only">Search</span>
+                        </Button>
+                      </form>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                      {isSearching ? (
+                          <div className="p-4 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
+                      ) : suggestions.length > 0 ? (
+                           <div className="flex flex-col">
+                            {suggestions.map(product => (
+                                <Link key={product.id} href={`/store/${appId}/product/${product.id}`} className="flex items-center gap-4 p-3 hover:bg-muted" onClick={() => setIsSuggestionPopoverOpen(false)}>
+                                    <Image src={product.imageUrl} alt={product.name} width={40} height={40} className="rounded-md object-cover" />
+                                    <span className="font-medium">{product.name}</span>
+                                    <span className="ml-auto text-sm text-primary">₹{product.price.toFixed(2)}</span>
+                                </Link>
+                            ))}
+                           </div>
+                      ) : (
+                          <div className="p-4 text-center text-sm text-muted-foreground">No suggestions found.</div>
+                      )}
+                  </PopoverContent>
+              </Popover>
             </div>
 
             <div className={cn("flex items-center gap-2 md:gap-4 transition-opacity", isSearchExpanded && "opacity-0 pointer-events-none w-0")}>

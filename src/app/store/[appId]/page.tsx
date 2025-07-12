@@ -2,17 +2,18 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { collection, doc, onSnapshot, query, orderBy, where } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowRight, MessageCircle, Instagram, PackageX, Link as LinkIcon } from 'lucide-react';
+import { ArrowRight, MessageCircle, Instagram, Link as LinkIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 interface Product {
   id: string;
@@ -22,6 +23,7 @@ interface Product {
   imageUrl: string;
   quantity: number | null;
   platform: 'instagram' | 'whatsapp' | 'affiliate';
+  categories?: string[];
 }
 
 interface Category {
@@ -36,23 +38,16 @@ interface AppData {
     logoUrl?: string;
     coverUrl?: string;
   };
-  integrations?: {
-    whatsappNumber?: string;
-    instagramUsername?: string;
-  };
 }
-
 
 export default function StorefrontPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const appId = params.appId as string;
   const { toast } = useToast();
     
   const [appData, setAppData] = useState<AppData | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -81,19 +76,6 @@ export default function StorefrontPage() {
       unsubProducts();
     };
   }, [appId]);
-
-  useEffect(() => {
-    const searchTerm = searchParams.get('search');
-    if (searchTerm) {
-        const filtered = products.filter(product => 
-            product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
-        );
-        setFilteredProducts(filtered);
-    } else {
-        setFilteredProducts(products);
-    }
-  }, [searchParams, products]);
   
   const handleProductClick = (e: React.MouseEvent<HTMLAnchorElement>, isOutOfStock: boolean) => {
     if (isOutOfStock) {
@@ -106,6 +88,39 @@ export default function StorefrontPage() {
     }
   };
 
+  const ProductCard = ({ product }: { product: Product }) => {
+    const isOutOfStock = product.quantity !== null && product.quantity <= 0;
+    return (
+      <Link 
+        href={`/store/${appId}/product/${product.id}`} 
+        className={cn("block", isOutOfStock && 'cursor-not-allowed')}
+        onClick={(e) => handleProductClick(e, isOutOfStock)}
+        aria-disabled={isOutOfStock}
+      >
+        <div className="bg-background rounded-lg border overflow-hidden flex flex-col group transition-all hover:shadow-xl hover:-translate-y-1 h-full">
+          <div className="relative h-56 w-full overflow-hidden">
+            <Image src={product.imageUrl} layout="fill" objectFit="cover" alt={product.name} className="group-hover:scale-105 transition-transform duration-300"/>
+              {isOutOfStock && (
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                    <Badge variant="destructive" className="text-base px-4 py-2">Out of Stock</Badge>
+                </div>
+            )}
+          </div>
+          <div className="p-4 flex-grow flex flex-col">
+            <h3 className="font-semibold text-lg truncate">{product.name}</h3>
+            <p className="text-muted-foreground text-sm mt-1 flex-grow">{product.description}</p>
+            <div className="flex items-center justify-between mt-4">
+              <p className="font-bold text-xl text-primary">₹{product.price.toFixed(2)}</p>
+              <Badge variant="outline" className="capitalize">
+                  {product.platform === 'whatsapp' ? <MessageCircle className="h-4 w-4 mr-1.5"/> : product.platform === 'instagram' ? <Instagram className="h-4 w-4 mr-1.5"/> : <LinkIcon className="h-4 w-4 mr-1.5"/>}
+                  {product.platform}
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </Link>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -113,7 +128,7 @@ export default function StorefrontPage() {
         <Skeleton className="w-full h-80 rounded-lg" />
         <div className="space-y-4 container mx-auto">
           <Skeleton className="h-10 w-1/4" />
-          <div className="flex flex-wrap gap-4">
+          <div className="flex gap-4">
             {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-24 rounded-lg" />)}
           </div>
         </div>
@@ -126,8 +141,6 @@ export default function StorefrontPage() {
       </div>
     );
   }
-  
-  const productsToShow = searchParams.get('search') ? filteredProducts : products;
 
   return (
     <>
@@ -141,81 +154,80 @@ export default function StorefrontPage() {
           </div>
       </section>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <section id="categories" className="mb-16">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
+        <section id="categories">
+            <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold tracking-tight">Shop by Category</h2>
+            </div>
+             {categories.length > 0 ? (
+                <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
+                    <CarouselContent className="-ml-2">
+                        {categories.map(category => (
+                            <CarouselItem key={category.id} className="pl-2 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/6">
+                                <Link href={`/store/${appId}/category/${category.id}`}>
+                                  <div className="bg-background border rounded-lg p-4 h-full flex items-center justify-center text-center hover:shadow-lg transition-shadow cursor-pointer">
+                                      <p className="font-semibold">{category.name}</p>
+                                  </div>
+                                </Link>
+                            </CarouselItem>
+                        ))}
+                    </CarouselContent>
+                </Carousel>
+             ) : (
+                <p className="text-muted-foreground">No categories yet.</p>
+             )}
+        </section>
+
+        <section id="new-arrivals">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold tracking-tight">Shop by Category</h2>
+            <h2 className="text-2xl font-bold tracking-tight">New Arrivals</h2>
             <Button variant="ghost" asChild>
-              <Link href="#">See All <ArrowRight className="ml-2 h-4 w-4" /></Link>
+              <Link href={`/store/${appId}/products`}>View All <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
           </div>
-          {categories.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              {categories.map(category => (
-                <div key={category.id} className="bg-background border rounded-lg p-4 text-center hover:shadow-lg transition-shadow cursor-pointer">
-                  <p className="font-semibold">{category.name}</p>
-                </div>
-              ))}
-            </div>
+          {products.length > 0 ? (
+            <Carousel opts={{ align: "start" }} className="w-full">
+                <CarouselContent className="-ml-4">
+                    {products.slice(0, 10).map(product => (
+                        <CarouselItem key={product.id} className="pl-4 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
+                           <ProductCard product={product} />
+                        </CarouselItem>
+                    ))}
+                </CarouselContent>
+                <CarouselPrevious className="hidden md:flex" />
+                <CarouselNext className="hidden md:flex" />
+            </Carousel>
           ) : (
-             <p className="text-muted-foreground">No categories yet.</p>
+            <p className="text-muted-foreground text-center py-8">No new products yet.</p>
           )}
         </section>
 
-        <section id="products">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold tracking-tight">{searchParams.get('search') ? `Search results for "${searchParams.get('search')}"` : 'New Arrivals'}</h2>
-            {!searchParams.get('search') && 
-              <Button variant="ghost" asChild>
-                <Link href="#">View All <ArrowRight className="ml-2 h-4 w-4" /></Link>
-              </Button>
-            }
-          </div>
-          {productsToShow.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {productsToShow.map(product => {
-                const isOutOfStock = product.quantity !== null && product.quantity <= 0;
-                return (
-                  <Link 
-                    key={product.id} 
-                    href={`/store/${appId}/product/${product.id}`} 
-                    className={cn("block", isOutOfStock && 'cursor-not-allowed')}
-                    onClick={(e) => handleProductClick(e, isOutOfStock)}
-                    aria-disabled={isOutOfStock}
-                  >
-                    <div className="bg-background rounded-lg border overflow-hidden flex flex-col group transition-all hover:shadow-xl hover:-translate-y-1 h-full">
-                      <div className="relative h-56 w-full overflow-hidden">
-                        <Image src={product.imageUrl} layout="fill" objectFit="cover" alt={product.name} className="group-hover:scale-105 transition-transform duration-300"/>
-                         {isOutOfStock && (
-                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                <Badge variant="destructive" className="text-base px-4 py-2">Out of Stock</Badge>
-                            </div>
-                        )}
-                      </div>
-                      <div className="p-4 flex-grow flex flex-col">
-                        <h3 className="font-semibold text-lg truncate">{product.name}</h3>
-                        <p className="text-muted-foreground text-sm mt-1 flex-grow">{product.description}</p>
-                        <div className="flex items-center justify-between mt-4">
-                          <p className="font-bold text-xl text-primary">₹{product.price.toFixed(2)}</p>
-                          <Badge variant="outline" className="capitalize">
-                              {product.platform === 'whatsapp' ? <MessageCircle className="h-4 w-4 mr-1.5"/> : product.platform === 'instagram' ? <Instagram className="h-4 w-4 mr-1.5"/> : <LinkIcon className="h-4 w-4 mr-1.5"/>}
-                              {product.platform}
-                          </Badge>
-                        </div>
-                      </div>
+        {categories.map(category => {
+            const categoryProducts = products.filter(p => p.categories?.includes(category.id));
+            if (categoryProducts.length === 0) return null;
+            return (
+                <section key={category.id} id={`category-${category.id}`}>
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-2xl font-bold tracking-tight">{category.name}</h2>
+                        <Button variant="ghost" asChild>
+                            <Link href={`/store/${appId}/category/${category.id}`}>View All <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                        </Button>
                     </div>
-                  </Link>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-12 border-2 border-dashed rounded-lg flex flex-col items-center">
-                <PackageX className="h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-xl font-semibold">{searchParams.get('search') ? 'No Products Found' : 'No Products Yet'}</h3>
-                <p className="mt-1 text-muted-foreground">{searchParams.get('search') ? 'Try a different search term.' : 'Products added in the dashboard will appear here.'}</p>
-            </div>
-          )}
-        </section>
+                     <Carousel opts={{ align: "start" }} className="w-full">
+                        <CarouselContent className="-ml-4">
+                            {categoryProducts.map(product => (
+                                <CarouselItem key={product.id} className="pl-4 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
+                                   <ProductCard product={product} />
+                                </CarouselItem>
+                            ))}
+                        </CarouselContent>
+                        <CarouselPrevious className="hidden md:flex" />
+                        <CarouselNext className="hidden md:flex" />
+                    </Carousel>
+                </section>
+            );
+        })}
+
       </div>
     </>
   );
