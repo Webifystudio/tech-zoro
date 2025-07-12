@@ -77,7 +77,11 @@ export default function CustomizationPage() {
           const appData = appDocSnap.data();
           if (appData.customization) {
             const fetchedSettings = {
-              ...settings, // Start with defaults
+              logoUrl: null,
+              coverUrl: null,
+              primaryColor: '#34D399',
+              fontFamily: 'inter',
+              theme: 'default',
               ...appData.customization,
             };
             setSettings(fetchedSettings);
