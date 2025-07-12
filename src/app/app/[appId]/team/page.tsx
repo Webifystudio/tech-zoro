@@ -1,11 +1,13 @@
+
 "use client";
 
 import { useState, useEffect, type FormEvent } from 'react';
 import { useParams } from 'next/navigation';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { collection, addDoc, query, onSnapshot, deleteDoc, doc, where } from 'firebase/firestore';
+import { collection, addDoc, query, onSnapshot, deleteDoc, doc, where, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { sendTeamInvitation } from '@/ai/flows/send-team-invitation-flow';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +28,10 @@ interface TeamMember {
   name?: string;
 }
 
+interface AppData {
+    name: string;
+}
+
 export default function TeamPage() {
   const params = useParams();
   const appId = params.appId as string;
@@ -33,6 +39,7 @@ export default function TeamPage() {
 
   const [user, setUser] = useState<User | null>(null);
   const [team, setTeam] = useState<TeamMember[]>([]);
+  const [appData, setAppData] = useState<AppData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const [inviteEmail, setInviteEmail] = useState('');
@@ -48,6 +55,14 @@ export default function TeamPage() {
 
   useEffect(() => {
     if (user && db && appId) {
+      // Fetch app data
+      const appDocRef = doc(db, "apps", appId);
+      const unsubApp = onSnapshot(appDocRef, (doc) => {
+          if (doc.exists()) {
+            setAppData(doc.data() as AppData);
+          }
+      });
+      
       // Add current user as Owner if not already there
       const ownerMember: TeamMember = {
         id: user.uid,
@@ -75,7 +90,10 @@ export default function TeamPage() {
           setIsLoading(false);
       });
 
-      return () => unsubscribe();
+      return () => {
+        unsubscribe();
+        unsubApp();
+      }
     } else if (!user) {
         setIsLoading(false);
     }
@@ -83,7 +101,7 @@ export default function TeamPage() {
   
   const handleInvite = async (e: FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail || !inviteRole || !db) {
+    if (!inviteEmail || !inviteRole || !db || !user?.displayName || !appData?.name) {
         toast({ variant: 'destructive', title: 'Missing fields', description: 'Please provide an email and a role.' });
         return;
     }
@@ -93,6 +111,15 @@ export default function TeamPage() {
             email: inviteEmail,
             role: inviteRole,
         });
+
+        const invitationLink = `${window.location.origin}/app/${appId}`;
+        await sendTeamInvitation({
+            recipientEmail: inviteEmail,
+            inviterName: user.displayName,
+            appName: appData.name,
+            invitationLink: invitationLink
+        });
+
         toast({ title: 'Invite Sent', description: `An invitation has been sent to ${inviteEmail}.` });
         setInviteEmail('');
         setInviteRole('');

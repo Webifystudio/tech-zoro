@@ -129,18 +129,6 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
   }, [appId]);
 
   useEffect(() => {
-    if (appId && db && (isPubliclyHosted || linkStatus === 'online')) {
-      const visitorKey = `zoro_visited_${appId}`;
-      const hasVisited = sessionStorage.getItem(visitorKey);
-      if (!hasVisited) {
-        const appRef = doc(db, 'apps', appId);
-        updateDoc(appRef, { visitors: increment(1) }).catch(console.error);
-        sessionStorage.setItem(visitorKey, 'true');
-      }
-    }
-  }, [appId, isPubliclyHosted, linkStatus]);
-
-  useEffect(() => {
     if (!searchTerm.trim()) {
       setSuggestions([]);
       setIsSuggestionPopoverOpen(false);
@@ -397,7 +385,7 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
 export default function StoreLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.Node;
 }) {
   return (
     <CartProvider>

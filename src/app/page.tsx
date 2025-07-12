@@ -6,11 +6,11 @@ import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import Image from 'next/image';
 import Link from 'next/link';
-import { collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy } from 'firebase/firestore';
+import { collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy, deleteDoc, doc, getDocs } from 'firebase/firestore';
 
 import { auth, isFirebaseConfigured, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Search, User } from 'lucide-react';
+import { Loader2, Plus, Search, User, MoreVertical, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -23,6 +23,17 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +56,7 @@ export default function Home() {
   const [newAppName, setNewAppName] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreatingApp, setIsCreatingApp] = useState(false);
+  const [appToDelete, setAppToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isFirebaseConfigured || !auth) {
@@ -127,6 +139,21 @@ export default function Home() {
     }
   };
 
+  const handleDeleteApp = async () => {
+    if (!appToDelete || !db) return;
+    
+    try {
+        // Here you could also delete subcollections, but for now we just delete the app doc.
+        // For a production app, you would want a Cloud Function to handle cascading deletes.
+        await deleteDoc(doc(db, "apps", appToDelete));
+        toast({ title: "App Deleted", description: "The application has been successfully deleted." });
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Deletion failed', description: error.message });
+    } finally {
+        setAppToDelete(null);
+    }
+  };
+
   const getInitials = (name: string | null | undefined): string => {
     if (!name) return 'U';
     const nameParts = name.split(' ');
@@ -146,6 +173,7 @@ export default function Home() {
 
   if (user) {
     return (
+     <AlertDialog>
       <div className="flex min-h-screen w-full flex-col bg-muted/20">
         <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 sm:px-6">
           <Link href="/">
@@ -237,8 +265,24 @@ export default function Home() {
             {apps.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {apps.map((app) => (
-                        <Link href={`/app/${app.id}`} key={app.id} className="block">
-                          <Card className="hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden group">
+                        <Card key={app.id} className="hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden group">
+                           <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-background/50 hover:bg-background/80">
+                                        <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <AlertDialogTrigger asChild>
+                                        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setAppToDelete(app.id); }} className="text-destructive focus:text-destructive">
+                                            <Trash2 className="mr-2 h-4 w-4"/>
+                                            Delete
+                                        </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
+                          <Link href={`/app/${app.id}`} className="block">
                               <CardContent className="p-0 relative">
                                   <Image
                                       src="https://placehold.co/600x400.png"
@@ -252,8 +296,8 @@ export default function Home() {
                               <CardHeader>
                                   <CardTitle className="truncate">{app.name}</CardTitle>
                               </CardHeader>
-                          </Card>
-                        </Link>
+                          </Link>
+                        </Card>
                     ))}
                 </div>
             ) : (
@@ -270,6 +314,21 @@ export default function Home() {
           </div>
         </main>
       </div>
+
+       <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This action cannot be undone. This will permanently delete your
+            application and remove all of its data from our servers.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setAppToDelete(null)}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDeleteApp} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     );
   }
 
