@@ -24,7 +24,6 @@ const managementMenuItems = [
     { href: `/app/{appId}/integrations`, label: 'Integrations', icon: Share2 },
     { href: `/app/{appId}/team`, label: 'Team', icon: Users2 },
     { href: `/app/{appId}/settings`, label: 'Settings', icon: Settings },
-    { href: `/app/{appId}/setup`, label: 'Setup', icon: KeyRound },
 ];
 
 const availableExtensions = [
@@ -99,3 +98,5 @@ export function AppSidebar() {
     </Sidebar>
   )
 }
+
+    
