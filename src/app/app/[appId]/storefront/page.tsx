@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -32,15 +32,14 @@ export default function StorefrontManagementPage() {
   const [copied, setCopied] = useState(false);
   const [appData, setAppData] = useState<AppData | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [publicUrl, setPublicUrl] = useState('');
   
-  const publicUrl = useMemo(() => {
-    if (typeof window !== 'undefined') {
-      return `${window.location.origin}/store/${appId}`;
-    }
-    return '';
+  const statusKey = `storefront_status_${appId}`;
+
+  useEffect(() => {
+    // This effect runs only on the client, after hydration
+    setPublicUrl(`${window.location.origin}/store/${appId}`);
   }, [appId]);
-  
-  const statusKey = useMemo(() => `storefront_status_${appId}`, [appId]);
 
   useEffect(() => {
     if (!appId || !db) return;
@@ -176,7 +175,7 @@ export default function StorefrontManagementPage() {
                         {copied ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Copy className="mr-2 h-4 w-4" />}
                         Copy
                     </Button>
-                    <Button asChild variant="outline" disabled={linkStatus !== 'online' && !appData?.isPublic}>
+                    <Button asChild variant="outline" disabled={!publicUrl || (linkStatus !== 'online' && !appData?.isPublic)}>
                         <Link href={publicUrl} target="_blank">
                              <Eye className="mr-2 h-4 w-4"/> Visit
                         </Link>
