@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -5,15 +6,17 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 
-import { auth, googleProvider, isFirebaseConfigured } from '@/lib/firebase';
+import { auth, googleProvider, isFirebaseConfigured, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { sendWelcomeEmail } from '@/ai/flows/send-welcome-email-flow';
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -84,7 +87,27 @@ export function LoginForm() {
     }
     setIsGoogleLoading(true);
     try {
-        await signInWithPopup(auth, googleProvider);
+        const result = await signInWithPopup(auth, googleProvider);
+        const additionalInfo = getAdditionalUserInfo(result);
+        
+        // If it's a new user, create their document in Firestore and send a welcome email
+        if (additionalInfo?.isNewUser) {
+            if (db) {
+                await setDoc(doc(db, 'users', result.user.uid), {
+                    uid: result.user.uid,
+                    email: result.user.email,
+                    displayName: result.user.displayName,
+                    photoURL: result.user.photoURL,
+                }, { merge: true });
+            }
+            if (result.user.email && result.user.displayName) {
+                await sendWelcomeEmail({ email: result.user.email, username: result.user.displayName });
+            }
+             toast({ title: 'Account created!', description: "Welcome! We're glad to have you." });
+        } else {
+            toast({ title: "Welcome back!"});
+        }
+        
         router.push('/');
         router.refresh();
     } catch (error: any) {

@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
+import { sendWelcomeEmail } from '@/ai/flows/send-welcome-email-flow';
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -66,6 +67,24 @@ export function RegisterForm() {
         photoURL: user.photoURL,
     }, { merge: true }); // Use merge to avoid overwriting existing data if any
   }
+  
+  const handleSuccessfulRegistration = async (user: User) => {
+    try {
+        if (user.email && user.displayName) {
+            await sendWelcomeEmail({ email: user.email, username: user.displayName });
+        }
+    } catch (emailError) {
+        console.error("Failed to send welcome email:", emailError);
+        // Do not block user flow if email fails. Just log it.
+        toast({
+            variant: "destructive",
+            title: "Could not send welcome email",
+            description: "Your registration was successful, but we couldn't send a welcome email. Please contact support if this persists.",
+        });
+    }
+    router.push('/');
+    router.refresh();
+  }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!isFirebaseConfigured || !auth) {
@@ -90,8 +109,7 @@ export function RegisterForm() {
         title: "Account created!",
         description: "You have been successfully registered and logged in.",
       });
-      router.push('/');
-      router.refresh();
+      await handleSuccessfulRegistration(userCredential.user);
     } catch (error: any) {
       let errorMessage = "There was a problem with your request.";
       if (error.code === 'auth/email-already-in-use') {
@@ -126,9 +144,11 @@ export function RegisterForm() {
         await createUserInFirestore(result.user);
 
         if (additionalInfo?.isNewUser) {
-            setGoogleUser(result.user);
             if (result.user.displayName) {
-                usernameForm.setValue('username', result.user.displayName.replace(/\\s/g, '').toLowerCase());
+                toast({ title: "Account created!", description: "Welcome!" });
+                await handleSuccessfulRegistration(result.user);
+            } else {
+                setGoogleUser(result.user);
             }
         } else {
             toast({
@@ -161,8 +181,7 @@ export function RegisterForm() {
             title: "Registration complete!",
             description: "Your profile has been created.",
         });
-        router.push('/');
-        router.refresh();
+        await handleSuccessfulRegistration(auth.currentUser!);
     } catch (error: any) {
         toast({
             variant: "destructive",
