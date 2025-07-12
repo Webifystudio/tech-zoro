@@ -3,11 +3,11 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShoppingCart, ListChecks, ShoppingBag, LayoutGrid } from 'lucide-react';
+import { ShoppingCart, ListChecks, ShoppingBag, LayoutGrid, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { collection, query, onSnapshot, where } from 'firebase/firestore';
+import { collection, query, onSnapshot, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -20,6 +20,7 @@ export default function AppDashboardPage() {
     totalOrders: 0,
     pendingInquiries: 0,
     totalCategories: 0,
+    totalVisitors: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -37,7 +38,7 @@ export default function AppDashboardPage() {
     };
 
     let loadedCount = 0;
-    const totalListeners = Object.keys(collections).length;
+    const totalListeners = Object.keys(collections).length + 1; // +1 for the app doc listener
     
     const createListener = (q: any, statKey: keyof typeof stats) => {
         return onSnapshot(q, snapshot => {
@@ -49,17 +50,29 @@ export default function AppDashboardPage() {
         });
     }
 
+    const unsubApp = onSnapshot(doc(db, 'apps', appId), (doc) => {
+      if (doc.exists()) {
+        setStats(prev => ({ ...prev, totalVisitors: doc.data().visitors || 0 }));
+      }
+      loadedCount++;
+      if(loadedCount === totalListeners) {
+        setIsLoading(false);
+      }
+    });
+
     const unsubscribers = [
       createListener(collections.products, 'totalProducts'),
       createListener(collections.orders, 'totalOrders'),
       createListener(collections.pendingOrders, 'pendingInquiries'),
       createListener(collections.categories, 'totalCategories'),
+      unsubApp,
     ];
 
     return () => unsubscribers.forEach(unsub => unsub());
   }, [appId]);
 
   const cardStats = [
+    { title: "Total Visitors", value: stats.totalVisitors, icon: Users, description: "Unique visits to your store" },
     { title: "Total Products", value: stats.totalProducts, icon: ShoppingBag, description: "All products in your store" },
     { title: "Total Categories", value: stats.totalCategories, icon: LayoutGrid, description: "Product categories created" },
     { title: "Total Orders", value: stats.totalOrders, icon: ShoppingCart, description: "All orders and inquiries" },
@@ -80,7 +93,7 @@ export default function AppDashboardPage() {
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28" />)}
+          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-28" />)}
         </div>
         <Card>
           <CardHeader>
@@ -114,7 +127,7 @@ export default function AppDashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         {cardStats.map((stat, index) => (
           <Card
             key={stat.title}

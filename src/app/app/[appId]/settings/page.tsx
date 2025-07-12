@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { FormEvent, ChangeEvent } from 'react';
@@ -21,10 +22,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface AppSettings {
     name: string;
     description: string;
-    branding: {
-        logoUrl: string | null;
-        coverUrl: string | null;
-    }
 }
 
 export default function AppSettingsPage() {
@@ -40,16 +37,8 @@ export default function AppSettingsPage() {
   const [settings, setSettings] = useState<AppSettings>({
     name: '',
     description: '',
-    branding: { logoUrl: null, coverUrl: null }
   });
   
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
-  const logoInputRef = useRef<HTMLInputElement>(null);
-  const coverInputRef = useRef<HTMLInputElement>(null);
-
   const [publicUrl, setPublicUrl] = useState('');
 
   useEffect(() => {
@@ -87,11 +76,8 @@ export default function AppSettingsPage() {
           const currentSettings = {
               name: appData.name || '',
               description: appData.description || '',
-              branding: appData.branding || { logoUrl: null, coverUrl: null }
           };
           setSettings(currentSettings);
-          setLogoPreview(currentSettings.branding.logoUrl);
-          setCoverPreview(currentSettings.branding.coverUrl);
 
         } else {
           toast({ variant: 'destructive', title: 'App not found', description: 'The requested app does not exist.' });
@@ -108,62 +94,17 @@ export default function AppSettingsPage() {
     fetchAppData();
   }, [user, appId, router, toast]);
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>, type: 'logo' | 'cover') => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const previewUrl = URL.createObjectURL(file);
-      if (type === 'logo') {
-        setLogoFile(file);
-        setLogoPreview(previewUrl);
-      } else {
-        setCoverFile(file);
-        setCoverPreview(previewUrl);
-      }
-    }
-  };
-
   const handleSaveChanges = async (e: FormEvent) => {
     e.preventDefault();
     if (!db || !appId) return;
     setIsSaving(true);
 
     try {
-        let updatedBranding = { ...settings.branding };
-
-        if (logoFile) {
-            const base64Image = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(logoFile);
-                reader.onload = () => resolve(reader.result as string);
-                reader.onerror = error => reject(error);
-            });
-            const result = await uploadImage(base64Image);
-            if(result.url) updatedBranding.logoUrl = result.url;
-            else throw new Error('Logo upload failed');
-        }
-
-        if (coverFile) {
-            const base64Image = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(coverFile);
-                reader.onload = () => resolve(reader.result as string);
-                reader.onerror = error => reject(error);
-            });
-            const result = await uploadImage(base64Image);
-            if(result.url) updatedBranding.coverUrl = result.url;
-            else throw new Error('Cover upload failed');
-        }
-
-
       const appDocRef = doc(db, 'apps', appId);
       await updateDoc(appDocRef, {
         name: settings.name,
         description: settings.description,
-        branding: updatedBranding,
       });
-      
-      setLogoFile(null);
-      setCoverFile(null);
       
       toast({
         title: 'Settings Saved',
@@ -258,42 +199,6 @@ export default function AppSettingsPage() {
                         placeholder="Tell us about your website"
                     />
                     </div>
-                </CardContent>
-            </Card>
-             <Card>
-                <CardHeader>
-                <CardTitle>Branding</CardTitle>
-                <CardDescription>Upload your store's logo and cover image.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    <Label>Store Logo</Label>
-                    <input type="file" accept="image/*" ref={logoInputRef} onChange={(e) => handleFileChange(e, 'logo')} className="hidden" />
-                    <Card className="aspect-square border-dashed flex items-center justify-center" onClick={() => logoInputRef.current?.click()}>
-                    {logoPreview ? (
-                        <Image src={logoPreview} alt="Logo preview" width={200} height={200} className="w-full h-full object-contain rounded-md p-4" />
-                    ) : (
-                        <div className="text-center cursor-pointer p-4">
-                        <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
-                        <p className="mt-2 text-sm text-muted-foreground">Click to upload logo</p>
-                        </div>
-                    )}
-                    </Card>
-                </div>
-                <div className="space-y-2">
-                    <Label>Cover Image</Label>
-                    <input type="file" accept="image/*" ref={coverInputRef} onChange={(e) => handleFileChange(e, 'cover')} className="hidden" />
-                    <Card className="aspect-square border-dashed flex items-center justify-center" onClick={() => coverInputRef.current?.click()}>
-                    {coverPreview ? (
-                        <Image src={coverPreview} alt="Cover preview" width={200} height={200} className="w-full h-full object-cover rounded-md" />
-                    ) : (
-                        <div className="text-center cursor-pointer p-4">
-                        <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
-                        <p className="mt-2 text-sm text-muted-foreground">Click to upload cover</p>
-                        </div>
-                    )}
-                    </Card>
-                </div>
                 </CardContent>
             </Card>
             </div>

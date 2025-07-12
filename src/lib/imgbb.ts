@@ -1,12 +1,36 @@
 
 'use server';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from './firebase';
+
 
 export async function uploadImage(
-  formData: FormData
+  base64Image: string,
+  appId: string
 ): Promise<{url: string; error?: undefined} | {error: string; url?: undefined}> {
-  const apiKey = '2bb2346a6a907388d8a3b0beac2bca86';
+  
+  if (!db || !appId) {
+    return { error: 'Database or App ID not configured for image upload.' };
+  }
 
   try {
+    const appRef = doc(db, 'apps', appId);
+    const appSnap = await getDoc(appRef);
+
+    if (!appSnap.exists()) {
+      return { error: 'Application not found.' };
+    }
+
+    const apiKey = appSnap.data()?.setup?.imgbbApiKey;
+    if (!apiKey) {
+      return { error: 'ImgBB API Key is not configured for this application. Please add it in the Setup page.' };
+    }
+    
+    const formData = new FormData();
+    // The image needs to be sent as base64 string without the data URI prefix
+    formData.append('image', base64Image.split(',')[1]);
+
+
     const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
       method: 'POST',
       body: formData,

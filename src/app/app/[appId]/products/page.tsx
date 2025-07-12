@@ -141,7 +141,7 @@ export default function ProductsPage() {
       reader.readAsDataURL(productImageFile);
       reader.onloadend = async () => {
           const base64Image = reader.result as string;
-          const result = await uploadImage(base64Image);
+          const result = await uploadImage(base64Image, appId);
 
           if (result.error) {
             throw new Error(`Image upload failed: ${result.error}`);

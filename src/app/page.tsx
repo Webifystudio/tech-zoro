@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -101,7 +102,7 @@ export default function Home() {
     
     setIsCreatingApp(true);
     try {
-      await addDoc(collection(db, "apps"), {
+      const docRef = await addDoc(collection(db, "apps"), {
         name: newAppName.trim(),
         ownerId: user.uid,
         createdAt: serverTimestamp(),
@@ -110,9 +111,11 @@ export default function Home() {
       setNewAppName('');
       setIsDialogOpen(false);
       toast({
-        title: "App Created",
-        description: `Your new app "${newAppName.trim()}" has been created.`,
+        title: "App Created!",
+        description: `Redirecting to setup page for "${newAppName.trim()}".`,
       })
+      router.push(`/app/${docRef.id}/setup`);
+
     } catch (error: any) {
        toast({
         variant: "destructive",

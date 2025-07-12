@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, type ReactNode, useMemo } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { collection, doc, onSnapshot, query, where, orderBy, limit, getDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, where, orderBy, limit, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -127,6 +127,18 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
     });
     return () => unsub();
   }, [appId]);
+
+  useEffect(() => {
+    if (appId && db && (isPubliclyHosted || linkStatus === 'online')) {
+      const visitorKey = `zoro_visited_${appId}`;
+      const hasVisited = sessionStorage.getItem(visitorKey);
+      if (!hasVisited) {
+        const appRef = doc(db, 'apps', appId);
+        updateDoc(appRef, { visitors: increment(1) }).catch(console.error);
+        sessionStorage.setItem(visitorKey, 'true');
+      }
+    }
+  }, [appId, isPubliclyHosted, linkStatus]);
 
   useEffect(() => {
     if (!searchTerm.trim()) {
