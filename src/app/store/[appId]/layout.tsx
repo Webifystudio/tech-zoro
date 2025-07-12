@@ -3,13 +3,13 @@
 
 import { useState, useEffect, useRef, type ReactNode, useMemo } from 'react';
 import Image from 'next/image';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { collection, doc, onSnapshot, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, where, orderBy, limit, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, ShoppingCart, User, X, Trash2, Globe, RefreshCw, Loader2 } from 'lucide-react';
+import { Search, ShoppingCart, X, Trash2, Globe, RefreshCw, Loader2, Home, FileText, Heart, PanelLeft, Contact } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Footer } from '@/components/Footer';
@@ -19,6 +19,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 
 interface AppData {
   name: string;
@@ -31,6 +32,11 @@ interface AppData {
     isBannerActive?: boolean;
     bannerText?: string;
   };
+  pages?: {
+    contact?: { isEnabled?: boolean };
+    privacy?: { isEnabled?: boolean };
+    terms?: { isEnabled?: boolean };
+  }
 }
 
 interface Product {
@@ -43,16 +49,14 @@ interface Product {
 const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const appId = params.appId as string;
   
   const [appData, setAppData] = useState<AppData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
+  
   const { cartItems, removeFromCart, clearCart } = useCart();
-  const [isCartOpen, setIsCartOpen] = useState(false);
   const cartTotal = cartItems.reduce((total, item) => total + item.price, 0);
 
   const [linkStatus, setLinkStatus] = useState<'offline' | 'online'>('offline');
@@ -61,7 +65,6 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
   const statusKey = useMemo(() => `storefront_status_${appId}`, [appId]);
   const isPubliclyHosted = appData?.isPublic === true;
   
-  // Search state
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
   const [suggestions, setSuggestions] = useState<Product[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -182,148 +185,199 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
         </div>
     )
   }
+  
+  const StoreSidebar = () => {
+      const menuItems = [
+          { href: `/store/${appId}`, label: 'Home', icon: Home },
+          { href: `/store/${appId}/cart`, label: 'Cart', icon: ShoppingCart },
+          { href: `/store/${appId}/wishlist`, label: 'Wishlist', icon: Heart },
+      ];
+
+      const pageItems = [
+          { id: 'contact', label: 'Contact Us', icon: Contact, href: `/store/${appId}/page/contact` },
+          { id: 'privacy', label: 'Privacy Policy', icon: FileText, href: `/store/${appId}/page/privacy` },
+          { id: 'terms', label: 'Terms & Conditions', icon: FileText, href: `/store/${appId}/page/terms` },
+      ];
+      
+      const enabledPages = pageItems.filter(p => appData?.pages?.[p.id as keyof typeof appData.pages]?.isEnabled);
+
+      return (
+        <Sidebar>
+            <SidebarHeader>
+                 <Link href={`/store/${appId}`} className="flex items-center gap-4">
+                  <Avatar>
+                    <AvatarImage src={appData?.customization?.logoUrl} alt={appData?.name} />
+                    <AvatarFallback>{appData?.name?.charAt(0) || 'S'}</AvatarFallback>
+                  </Avatar>
+                  <h1 className="text-xl font-bold text-foreground">{appData?.name || 'My Store'}</h1>
+                </Link>
+            </SidebarHeader>
+            <SidebarContent>
+                <SidebarMenu>
+                    {menuItems.map(item => (
+                        <SidebarMenuItem key={item.href}>
+                            <Link href={item.href} passHref>
+                                <SidebarMenuButton isActive={pathname === item.href} tooltip={item.label}>
+                                    <item.icon />
+                                    <span>{item.label}</span>
+                                </SidebarMenuButton>
+                            </Link>
+                        </SidebarMenuItem>
+                    ))}
+                    {enabledPages.length > 0 && <SidebarSeparator />}
+                     {enabledPages.map(item => (
+                        <SidebarMenuItem key={item.href}>
+                            <Link href={item.href} passHref>
+                                <SidebarMenuButton isActive={pathname === item.href} tooltip={item.label}>
+                                    <item.icon />
+                                    <span>{item.label}</span>
+                                </SidebarMenuButton>
+                            </Link>
+                        </SidebarMenuItem>
+                    ))}
+                </SidebarMenu>
+            </SidebarContent>
+        </Sidebar>
+    );
+  }
 
   return (
-    <div className="bg-muted/40 min-h-screen flex flex-col" data-theme={theme}>
+    <div className={cn("min-h-screen flex flex-col", (theme === 'glass' || theme === 'gradient') ? '' : 'bg-muted/40')} data-theme={theme}>
       {appData?.marketing?.isBannerActive && appData.marketing.bannerText && (
         <div className="bg-primary text-primary-foreground text-center py-2 px-4 text-sm font-semibold animate-slide-in-from-bottom">
           {appData.marketing.bannerText}
         </div>
       )}
-      <header className="bg-background/80 backdrop-blur-sm shadow-sm sticky top-0 z-40 border-b">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20 md:h-24 gap-4 md:gap-8">
-            <div className={cn("flex items-center gap-4 transition-opacity", isSearchExpanded && "opacity-0 pointer-events-none w-0")}>
-              {isLoading ? (
-                <>
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <Skeleton className="h-6 w-32 hidden sm:block" />
-                </>
-              ) : (
-                <Link href={`/store/${appId}`} className="flex items-center gap-4">
-                  <Avatar>
-                    <AvatarImage src={appData?.customization?.logoUrl} alt={appData?.name} />
-                    <AvatarFallback>{appData?.name?.charAt(0) || 'S'}</AvatarFallback>
-                  </Avatar>
-                  <h1 className="text-xl font-bold text-foreground hidden sm:block">{appData?.name || 'My Store'}</h1>
-                </Link>
-              )}
-            </div>
+      <SidebarProvider>
+      <StoreSidebar />
+      <div className={cn("flex-1 flex flex-col", theme === 'glass' && 'glass-card m-0 md:m-4 md:rounded-xl')}>
+        <header className="bg-background/80 backdrop-blur-sm shadow-sm sticky top-0 z-40 border-b">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-20 md:h-24 gap-4 md:gap-8">
+              
+              <div className="flex items-center gap-2">
+                <SidebarTrigger className="md:hidden" />
+                <div className="hidden md:flex items-center gap-4">
+                  {isLoading ? (
+                    <>
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <Skeleton className="h-6 w-32 hidden sm:block" />
+                    </>
+                  ) : (
+                    <Link href={`/store/${appId}`} className="flex items-center gap-4">
+                      <Avatar>
+                        <AvatarImage src={appData?.customization?.logoUrl} alt={appData?.name} />
+                        <AvatarFallback>{appData?.name?.charAt(0) || 'S'}</AvatarFallback>
+                      </Avatar>
+                      <h1 className="text-xl font-bold text-foreground hidden sm:block">{appData?.name || 'My Store'}</h1>
+                    </Link>
+                  )}
+                </div>
+              </div>
 
-            <div className={cn("flex-1 w-full transition-all duration-300", isSearchExpanded ? "max-w-full" : "max-w-xs sm:max-w-sm md:max-w-md lg:max-w-2xl")}>
-              <Popover open={isSuggestionPopoverOpen} onOpenChange={setIsSuggestionPopoverOpen}>
-                  <PopoverTrigger asChild>
-                      <form className="relative" onSubmit={handleSearchSubmit}>
-                        <Input 
-                          ref={searchInputRef}
-                          placeholder="Search products, brands and more..." 
-                          className="pl-5 pr-12 h-12 rounded-full w-full" 
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          onFocus={() => setIsSearchExpanded(true)}
-                        />
-                         <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full" type="submit">
-                            <Search className="h-5 w-5 text-muted-foreground" />
-                            <span className="sr-only">Search</span>
-                        </Button>
-                      </form>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                      {isSearching ? (
-                          <div className="p-4 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
-                      ) : suggestions.length > 0 ? (
-                           <div className="flex flex-col">
-                            {suggestions.map(product => (
-                                <Link key={product.id} href={`/store/${appId}/product/${product.id}`} className="flex items-center gap-4 p-3 hover:bg-muted" onClick={() => setIsSuggestionPopoverOpen(false)}>
-                                    <Image src={product.imageUrl} alt={product.name} width={40} height={40} className="rounded-md object-cover" />
-                                    <span className="font-medium">{product.name}</span>
-                                    <span className="ml-auto text-sm text-primary">₹{product.price.toFixed(2)}</span>
-                                </Link>
-                            ))}
-                           </div>
-                      ) : (
-                          <div className="p-4 text-center text-sm text-muted-foreground">No suggestions found.</div>
-                      )}
-                  </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className={cn("flex items-center gap-2 md:gap-4 transition-opacity", isSearchExpanded && "opacity-0 pointer-events-none w-0")}>
-              <Button size="icon" variant="ghost" className="rounded-full">
-                <User className="h-6 w-6" />
-                <span className="sr-only">Account</span>
-              </Button>
-              <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
-                <SheetTrigger asChild>
-                    <Button size="icon" variant="ghost" className="rounded-full relative">
-                        <ShoppingCart className="h-6 w-6" />
-                        <span className="sr-only">Cart</span>
-                        {cartItems.length > 0 && (
-                            <span className="absolute top-1 right-1 flex h-3 w-3 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground animate-ping once">
-                                {cartItems.length}
-                            </span>
+              <div className="flex-1 max-w-2xl">
+                <Popover open={isSuggestionPopoverOpen} onOpenChange={setIsSuggestionPopoverOpen}>
+                    <PopoverTrigger asChild>
+                        <form className="relative" onSubmit={handleSearchSubmit}>
+                          <Input 
+                            placeholder="Search products..." 
+                            className="pl-5 pr-12 h-12 rounded-full w-full" 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                          />
+                           <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full" type="submit">
+                              <Search className="h-5 w-5 text-muted-foreground" />
+                              <span className="sr-only">Search</span>
+                          </Button>
+                        </form>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        {isSearching ? (
+                            <div className="p-4 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
+                        ) : suggestions.length > 0 ? (
+                             <div className="flex flex-col">
+                              {suggestions.map(product => (
+                                  <Link key={product.id} href={`/store/${appId}/product/${product.id}`} className="flex items-center gap-4 p-3 hover:bg-muted" onClick={() => setIsSuggestionPopoverOpen(false)}>
+                                      <Image src={product.imageUrl} alt={product.name} width={40} height={40} className="rounded-md object-cover" />
+                                      <span className="font-medium">{product.name}</span>
+                                      <span className="ml-auto text-sm text-primary">₹{product.price.toFixed(2)}</span>
+                                  </Link>
+                              ))}
+                             </div>
+                        ) : (
+                            <div className="p-4 text-center text-sm text-muted-foreground">No suggestions found.</div>
                         )}
-                    </Button>
-                </SheetTrigger>
-                <SheetContent className="flex flex-col">
-                    <SheetHeader>
-                        <SheetTitle>Your Cart ({cartItems.length})</SheetTitle>
-                    </SheetHeader>
-                    {cartItems.length > 0 ? (
-                        <>
-                        <ScrollArea className="flex-grow my-4 -mx-6">
-                            <div className="px-6">
-                                {cartItems.map(item => (
-                                    <div key={item.id} className="flex items-center gap-4 py-4 border-b">
-                                        <Image src={item.imageUrl} alt={item.name} width={64} height={64} className="rounded-md object-cover" />
-                                        <div className="flex-grow">
-                                            <p className="font-semibold">{item.name}</p>
-                                            <p className="text-muted-foreground">₹{item.price.toFixed(2)}</p>
-                                        </div>
-                                        <Button variant="ghost" size="icon" onClick={() => removeFromCart(item.id)}>
-                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                        </Button>
-                                    </div>
-                                ))}
-                            </div>
-                        </ScrollArea>
-                        <SheetFooter className="mt-auto">
-                            <div className="w-full space-y-4">
-                                <Separator />
-                                <div className="flex justify-between font-bold text-lg">
-                                    <span>Subtotal</span>
-                                    <span>₹{cartTotal.toFixed(2)}</span>
-                                </div>
-                                <Button size="lg" className="w-full">Proceed to Checkout</Button>
-                                <Button variant="outline" className="w-full" onClick={clearCart}>Clear Cart</Button>
-                            </div>
-                        </SheetFooter>
-                        </>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-center">
-                            <ShoppingCart className="h-16 w-16 text-muted-foreground" />
-                            <h3 className="mt-4 text-lg font-semibold">Your cart is empty</h3>
-                            <p className="text-muted-foreground mt-1">Add some products to get started!</p>
-                        </div>
-                    )}
-                </SheetContent>
-               </Sheet>
-            </div>
-             {isSearchExpanded && (
-                <Button size="icon" variant="ghost" className="rounded-full" onClick={() => setIsSearchExpanded(false)}>
-                    <X className="h-6 w-6" />
-                    <span className="sr-only">Close search</span>
-                </Button>
-            )}
-          </div>
-        </div>
-      </header>
-      
-      <main className="flex-grow bg-background">
-        {children}
-      </main>
+                    </PopoverContent>
+                </Popover>
+              </div>
 
-      <Footer />
+              <div className="flex items-center gap-2 md:gap-4">
+                <Sheet>
+                  <SheetTrigger asChild>
+                      <Button size="icon" variant="ghost" className="rounded-full relative">
+                          <ShoppingCart className="h-6 w-6" />
+                          <span className="sr-only">Cart</span>
+                          {cartItems.length > 0 && (
+                              <span className="absolute top-1 right-1 flex h-3 w-3 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground animate-ping once"></span>
+                          )}
+                          <span className="absolute top-0 right-0 h-4 w-4 text-xs flex items-center justify-center rounded-full bg-primary text-primary-foreground">{cartItems.length}</span>
+                      </Button>
+                  </SheetTrigger>
+                  <SheetContent className="flex flex-col">
+                      <SheetHeader>
+                          <SheetTitle>Your Cart ({cartItems.length})</SheetTitle>
+                      </SheetHeader>
+                      {cartItems.length > 0 ? (
+                          <>
+                          <ScrollArea className="flex-grow my-4 -mx-6">
+                              <div className="px-6">
+                                  {cartItems.map(item => (
+                                      <div key={item.id} className="flex items-center gap-4 py-4 border-b">
+                                          <Image src={item.imageUrl} alt={item.name} width={64} height={64} className="rounded-md object-cover" />
+                                          <div className="flex-grow">
+                                              <p className="font-semibold">{item.name}</p>
+                                              <p className="text-muted-foreground">₹{item.price.toFixed(2)}</p>
+                                          </div>
+                                          <Button variant="ghost" size="icon" onClick={() => removeFromCart(item.id)}>
+                                              <Trash2 className="h-4 w-4 text-destructive" />
+                                          </Button>
+                                      </div>
+                                  ))}
+                              </div>
+                          </ScrollArea>
+                          <SheetFooter className="mt-auto">
+                              <div className="w-full space-y-4">
+                                  <Separator />
+                                  <div className="flex justify-between font-bold text-lg">
+                                      <span>Subtotal</span>
+                                      <span>₹{cartTotal.toFixed(2)}</span>
+                                  </div>
+                                  <Button size="lg" className="w-full">Proceed to Checkout</Button>
+                                  <Button variant="outline" className="w-full" onClick={clearCart}>Clear Cart</Button>
+                              </div>
+                          </SheetFooter>
+                          </>
+                      ) : (
+                          <div className="flex flex-col items-center justify-center h-full text-center">
+                              <ShoppingCart className="h-16 w-16 text-muted-foreground" />
+                              <h3 className="mt-4 text-lg font-semibold">Your cart is empty</h3>
+                              <p className="text-muted-foreground mt-1">Add some products to get started!</p>
+                          </div>
+                      )}
+                  </SheetContent>
+                 </Sheet>
+              </div>
+            </div>
+          </div>
+        </header>
+      
+        <main className="flex-grow bg-background">
+          {children}
+        </main>
+
+        <Footer />
+      </div>
+      </SidebarProvider>
     </div>
   );
 }

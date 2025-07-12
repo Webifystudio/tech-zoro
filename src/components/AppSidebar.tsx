@@ -2,7 +2,7 @@
 "use client";
 
 import { Sidebar, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarContent, SidebarSeparator } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, Globe, LayoutGrid, ShoppingBag, BarChart3, Megaphone, Palette, Wrench, Users2, ClipboardList, Share2, PackageX, Puzzle, Ticket, QrCode } from 'lucide-react';
+import { LayoutDashboard, Settings, Globe, LayoutGrid, ShoppingBag, BarChart3, Megaphone, Palette, Wrench, Users2, ClipboardList, Share2, PackageX, Puzzle, Ticket, QrCode, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
 import { useLocalStorage } from '@/hooks/use-local-storage';
@@ -19,6 +19,7 @@ const coreMenuItems = [
 ];
 
 const managementMenuItems = [
+    { href: `/app/{appId}/pages`, label: 'Pages', icon: FileText },
     { href: `/app/{appId}/marketing`, label: 'Marketing', icon: Megaphone },
     { href: `/app/{appId}/customization`, label: 'Customization', icon: Palette },
     { href: `/app/{appId}/integrations`, label: 'Integrations', icon: Share2 },
@@ -41,9 +42,7 @@ export function AppSidebar() {
 
   useEffect(() => {
     setIsClient(true);
-    // This effect listens for storage changes to update the sidebar if an extension is installed in another tab.
     const handleStorageChange = () => {
-      // Force a re-render by updating a dummy state
        window.location.reload();
     };
     window.addEventListener('storage', handleStorageChange);
