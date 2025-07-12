@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -12,7 +13,7 @@ import { z } from 'zod';
 import * as nodemailer from 'nodemailer';
 import 'dotenv/config';
 
-export const WelcomeEmailInputSchema = z.object({
+const WelcomeEmailInputSchema = z.object({
   email: z.string().email().describe('The email address of the new user.'),
   username: z.string().describe('The username of the new user.'),
 });
