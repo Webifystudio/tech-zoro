@@ -41,11 +41,13 @@ export default function ThemesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
-  const [settings, setSettings] = useState<ThemeSettings>({
+  const [initialSettings, setInitialSettings] = useState<ThemeSettings>({
     theme: 'default',
     primaryColor: '#34D399',
     fontFamily: 'inter',
   });
+
+  const [stagedSettings, setStagedSettings] = useState<ThemeSettings>(initialSettings);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeKey, setIframeKey] = useState(Date.now());
@@ -61,7 +63,9 @@ export default function ThemesPage() {
           if (appDocSnap.exists()) {
             const appData = appDocSnap.data();
             if (appData.customization) {
-              setSettings(prev => ({ ...prev, ...appData.customization }));
+              const fetchedSettings = { ...initialSettings, ...appData.customization };
+              setInitialSettings(fetchedSettings);
+              setStagedSettings(fetchedSettings);
             }
           }
         } catch (error) {
@@ -72,16 +76,17 @@ export default function ThemesPage() {
       };
       fetchSettings();
     }
-  }, [appId, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appId]);
 
   useEffect(() => {
-    const message = { type: 'theme-change', theme: settings.theme };
+    const message = { type: 'theme-change', theme: stagedSettings.theme };
     iframeRef.current?.contentWindow?.postMessage(message, '*');
-  }, [settings.theme]);
+  }, [stagedSettings.theme]);
 
 
   const handleInputChange = (field: keyof ThemeSettings, value: string) => {
-    setSettings(prev => ({ ...prev, [field]: value }));
+    setStagedSettings(prev => ({ ...prev, [field]: value }));
   };
   
   const handleSaveChanges = async () => {
@@ -89,7 +94,8 @@ export default function ThemesPage() {
     setIsSaving(true);
     try {
       const appDocRef = doc(db, 'apps', appId);
-      await updateDoc(appDocRef, { customization: settings });
+      await updateDoc(appDocRef, { customization: stagedSettings });
+      setInitialSettings(stagedSettings);
       setIframeKey(Date.now());
       toast({ title: "Theme saved!" });
     } catch (error: any) {
@@ -135,14 +141,14 @@ export default function ThemesPage() {
                 <div key={theme.id} className="cursor-pointer group" onClick={() => handleInputChange('theme', theme.id)}>
                   <div className={cn(
                     "relative border-2 rounded-lg p-2 transition-all",
-                    settings.theme === theme.id ? 'border-primary' : 'border-transparent hover:border-muted-foreground/50'
+                    stagedSettings.theme === theme.id ? 'border-primary' : 'border-transparent hover:border-muted-foreground/50'
                   )}>
                     <div className="aspect-video w-full flex items-center justify-center gap-1 rounded-md overflow-hidden bg-muted p-2">
                       {theme.colors.map((color, i) => (
                          <div key={i} className={cn("h-full w-full rounded-sm", color)} />
                       ))}
                     </div>
-                     {settings.theme === theme.id && (
+                     {stagedSettings.theme === theme.id && (
                         <div className="absolute -top-2 -right-2 bg-background rounded-full">
                            <CheckCircle className="h-6 w-6 text-primary" />
                         </div>
@@ -167,12 +173,12 @@ export default function ThemesPage() {
                     <div className="flex items-center gap-2">
                         <Input 
                             type="color" 
-                            value={settings.primaryColor} 
+                            value={stagedSettings.primaryColor} 
                             onChange={(e) => handleInputChange('primaryColor', e.target.value)}
                             className="p-1 h-10 w-12"
                         />
                         <Input 
-                            value={settings.primaryColor} 
+                            value={stagedSettings.primaryColor} 
                             onChange={(e) => handleInputChange('primaryColor', e.target.value)}
                             className="max-w-xs"
                         />
@@ -189,7 +195,7 @@ export default function ThemesPage() {
                     <CardDescription>Choose the font for your store.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Select value={settings.fontFamily} onValueChange={(value) => handleInputChange('fontFamily', value)}>
+                    <Select value={stagedSettings.fontFamily} onValueChange={(value) => handleInputChange('fontFamily', value)}>
                         <SelectTrigger>
                             <SelectValue placeholder="Select a font" />
                         </SelectTrigger>
@@ -248,5 +254,3 @@ export default function ThemesPage() {
     </div>
   );
 }
-
-    
