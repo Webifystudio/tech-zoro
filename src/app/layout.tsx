@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 export default function RootLayout({
   children,
@@ -14,11 +15,16 @@ export default function RootLayout({
 }>) {
   const [isGlassEffectEnabled] = useLocalStorage('glass-effect-enabled', false);
   const pathname = usePathname();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const isStorePath = pathname.startsWith('/store');
   const isAuthPath = pathname === '/login' || pathname === '/register';
 
-  const shouldApplyGlassEffect = isGlassEffectEnabled && !isStorePath && !isAuthPath;
+  const shouldApplyGlassEffect = isMounted && isGlassEffectEnabled && !isStorePath && !isAuthPath;
 
   return (
     <html lang="en" suppressHydrationWarning>
