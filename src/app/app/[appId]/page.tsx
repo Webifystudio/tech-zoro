@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -137,7 +138,7 @@ export default function AppDashboardPage() {
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <Button variant="outline" asChild><Link href={`/app/${appId}/customization`}>Customize Store</Link></Button>
+          <Button variant="outline" asChild><Link href={`/app/${appId}/customize`}>Customize Store</Link></Button>
           <Button variant="outline" asChild><Link href={`/app/${appId}/marketing`}>Create Promotion</Link></Button>
           <Button variant="outline" asChild><Link href={`/app/${appId}/orders`}>View Orders</Link></Button>
           <Button variant="outline" asChild><Link href={`/app/${appId}/team`}>Invite Team Member</Link></Button>

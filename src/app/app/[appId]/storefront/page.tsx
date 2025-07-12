@@ -291,7 +291,7 @@ export default function StorefrontManagementPage() {
               </p>
               <div className="mt-6 flex flex-wrap gap-4 justify-center md:justify-start">
                  <Button asChild size="lg">
-                  <Link href={`/app/${appId}/customization`}>
+                  <Link href={`/app/${appId}/customize`}>
                     <Palette className="mr-2 h-5 w-5" />
                     Customize Store
                   </Link>

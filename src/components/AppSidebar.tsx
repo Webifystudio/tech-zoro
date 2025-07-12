@@ -21,7 +21,7 @@ const coreMenuItems = [
 const managementMenuItems = [
     { href: `/app/{appId}/pages`, label: 'Pages', icon: FileText },
     { href: `/app/{appId}/marketing`, label: 'Marketing', icon: Megaphone },
-    { href: `/app/{appId}/customization`, label: 'Customization', icon: Palette },
+    { href: `/app/{appId}/customize`, label: 'Customize', icon: Palette },
     { href: `/app/{appId}/integrations`, label: 'Integrations', icon: Share2 },
     { href: `/app/{appId}/team`, label: 'Team', icon: Users2 },
     { href: `/app/{appId}/settings`, label: 'Settings', icon: Settings },
