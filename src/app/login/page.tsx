@@ -1,8 +1,15 @@
+
+"use client";
+
 import { LoginForm } from '@/components/auth/LoginForm';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect');
+
   return (
     <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
       <div className="flex items-center justify-center py-12">
@@ -13,10 +20,10 @@ export default function LoginPage() {
               Enter your credentials to access your account
             </p>
           </div>
-          <LoginForm />
+          <LoginForm redirectUrl={redirect} />
           <div className="mt-4 text-center text-sm">
             Don&apos;t have an account?{" "}
-            <Link href="/register" className="underline text-primary font-medium">
+            <Link href={redirect ? `/register?redirect=${redirect}` : "/register"} className="underline text-primary font-medium">
               Sign up
             </Link>
           </div>

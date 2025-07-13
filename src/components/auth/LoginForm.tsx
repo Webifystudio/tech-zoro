@@ -30,7 +30,7 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-export function LoginForm() {
+export function LoginForm({ redirectUrl }: { redirectUrl?: string | null }) {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -56,7 +56,7 @@ export function LoginForm() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
-      router.push('/');
+      router.push(redirectUrl || '/');
       router.refresh(); 
     } catch (error: any) {
       const errorCode = error.code;
@@ -108,7 +108,7 @@ export function LoginForm() {
             toast({ title: "Welcome back!"});
         }
         
-        router.push('/');
+        router.push(redirectUrl || '/');
         router.refresh();
     } catch (error: any) {
         toast({

@@ -34,7 +34,7 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export function RegisterForm() {
+export function RegisterForm({ redirectUrl }: { redirectUrl?: string | null }) {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -82,7 +82,7 @@ export function RegisterForm() {
             description: "Your registration was successful, but we couldn't send a welcome email. Please contact support if this persists.",
         });
     }
-    router.push('/');
+    router.push(redirectUrl || '/');
     router.refresh();
   }
 
@@ -155,7 +155,7 @@ export function RegisterForm() {
                 title: "Welcome back!",
                 description: "You have been successfully logged in.",
             });
-            router.push('/');
+            router.push(redirectUrl || '/');
             router.refresh();
         }
     } catch (error: any) {

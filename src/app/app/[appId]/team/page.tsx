@@ -4,7 +4,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useParams } from 'next/navigation';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { collection, addDoc, query, onSnapshot, deleteDoc, doc, where, getDoc } from 'firebase/firestore';
+import { collection, addDoc, query, onSnapshot, deleteDoc, doc, where, getDocs, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { sendTeamInvitation } from '@/ai/flows/send-team-invitation-flow';
@@ -26,6 +26,7 @@ interface TeamMember {
   role: 'Admin' | 'Staff' | 'Owner';
   avatar?: string;
   name?: string;
+  uid?: string;
 }
 
 interface AppData {
@@ -63,25 +64,26 @@ export default function TeamPage() {
           }
       });
       
-      // Add current user as Owner if not already there
-      const ownerMember: TeamMember = {
-        id: user.uid,
-        name: user.displayName || 'Owner',
-        email: user.email || '',
-        role: 'Owner',
-        avatar: user.photoURL || '',
-      };
-
       const teamCollectionRef = collection(db, "apps", appId, "team");
       const q = query(teamCollectionRef);
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember));
+        
+        const ownerMember: TeamMember = {
+          id: user.uid,
+          uid: user.uid,
+          name: user.displayName || 'Owner',
+          email: user.email || '',
+          role: 'Owner',
+          avatar: user.photoURL || '',
+        };
+
         // Check if owner is already in the list to avoid duplicates
-        if (!members.some(m => m.id === ownerMember.id)) {
+        if (!members.some(m => m.uid === ownerMember.uid)) {
             setTeam([ownerMember, ...members]);
         } else {
-            setTeam(members.map(m => m.id === ownerMember.id ? ownerMember : m));
+            setTeam([ownerMember, ...members.filter(m => m.uid !== ownerMember.uid)]);
         }
         setIsLoading(false);
       }, (error) => {
@@ -107,12 +109,17 @@ export default function TeamPage() {
     }
     setIsInviting(true);
     try {
-        await addDoc(collection(db, "apps", appId, "team"), {
-            email: inviteEmail,
+        const newInviteRef = await addDoc(collection(db, "invitations"), {
+            recipientEmail: inviteEmail,
             role: inviteRole,
+            appId: appId,
+            appName: appData.name,
+            inviterName: user.displayName,
+            status: 'pending',
+            createdAt: serverTimestamp(),
         });
 
-        const invitationLink = `${window.location.origin}/app/${appId}`;
+        const invitationLink = `${window.location.origin}/invite/${newInviteRef.id}`;
         await sendTeamInvitation({
             recipientEmail: inviteEmail,
             inviterName: user.displayName,

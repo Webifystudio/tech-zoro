@@ -17,7 +17,7 @@ const TeamInvitationInputSchema = z.object({
   recipientEmail: z.string().email().describe('The email address of the person being invited.'),
   inviterName: z.string().describe('The name of the person sending the invitation.'),
   appName: z.string().describe('The name of the app they are being invited to.'),
-  invitationLink: z.string().url().describe('The direct link to the app dashboard.'),
+  invitationLink: z.string().url().describe('The unique link to accept the invitation.'),
 });
 
 export type TeamInvitationInput = z.infer<typeof TeamInvitationInputSchema>;
@@ -112,9 +112,9 @@ const sendTeamInvitationFlow = ai.defineFlow(
             <div class="content">
                 <h2>Hello,</h2>
                 <p><strong>${inviterName}</strong> has invited you to collaborate on the app <strong>"${appName}"</strong> on ZORO.</p>
-                <p>Click the button below to accept the invitation and access the app dashboard. If you don't have a ZORO account, you'll be prompted to create one first.</p>
+                <p>Click the button below to accept the invitation. If you don't have a ZORO account, you'll be prompted to create one first.</p>
                 <p>
-                    <a href="${invitationLink}" class="button">Go to Dashboard</a>
+                    <a href="${invitationLink}" class="button">Accept Invitation</a>
                 </p>
                 <p>Welcome to the team!<br>The ZORO Team</p>
             </div>

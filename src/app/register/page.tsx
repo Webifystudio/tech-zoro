@@ -1,9 +1,15 @@
 
+"use client";
+
 import { RegisterForm } from '@/components/auth/RegisterForm';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 
 export default function RegisterPage() {
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect');
+
   return (
     <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
        <div className="flex items-center justify-center py-12">
@@ -14,10 +20,10 @@ export default function RegisterPage() {
               Enter your information to create an account
             </p>
           </div>
-          <RegisterForm />
+          <RegisterForm redirectUrl={redirect} />
           <div className="mt-4 text-center text-sm">
             Already have an account?{" "}
-            <Link href="/login" className="underline text-primary font-medium">
+            <Link href={redirect ? `/login?redirect=${redirect}` : "/login"} className="underline text-primary font-medium">
               Login
             </Link>
           </div>

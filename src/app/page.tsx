@@ -10,7 +10,7 @@ import { collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy,
 
 import { auth, isFirebaseConfigured, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Search, User, MoreVertical, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Search, User, MoreVertical, Trash2, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -46,8 +46,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeToggle } from '@/components/theme-toggle';
+
+interface App {
+    id: string;
+    name: string;
+    isOwner: boolean;
+}
 
 export default function Home() {
   const router = useRouter();
@@ -55,7 +60,7 @@ export default function Home() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   
-  const [apps, setApps] = useState<{ id: string; name: string }[]>([]);
+  const [apps, setApps] = useState<App[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreatingApp, setIsCreatingApp] = useState(false);
   const [appToDelete, setAppToDelete] = useState<string | null>(null);
@@ -83,17 +88,33 @@ export default function Home() {
 
   useEffect(() => {
     if (user && db) {
-      const q = query(collection(db, "apps"), where("ownerId", "==", user.uid), orderBy("createdAt", "desc"));
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const userApps = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as { id: string; name: string }));
-        setApps(userApps);
-      }, (error) => {
-        console.error("Error fetching apps:", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not fetch your apps." });
-      });
-      return () => unsubscribe();
+        // Listener for owned apps
+        const ownedQuery = query(collection(db, "apps"), where("ownerId", "==", user.uid), orderBy("createdAt", "desc"));
+        const unsubOwned = onSnapshot(ownedQuery, (snapshot) => {
+            const ownedApps = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name, isOwner: true }));
+            setApps(prev => [...ownedApps, ...prev.filter(p => !p.isOwner)]);
+        }, (error) => {
+            console.error("Error fetching owned apps:", error);
+            toast({ variant: "destructive", title: "Error", description: "Could not fetch your apps." });
+        });
+
+        // Listener for collaborated apps
+        const collaboratedQuery = query(collection(db, `users/${user.uid}/collaboratedApps`));
+        const unsubCollaborated = onSnapshot(collaboratedQuery, (snapshot) => {
+            const collaboratedApps = snapshot.docs.map(doc => ({ id: doc.data().appId, name: doc.data().appName, isOwner: false }));
+            setApps(prev => [...collaboratedApps, ...prev.filter(p => p.isOwner)]);
+        }, (error) => {
+            console.error("Error fetching collaborated apps:", error);
+            toast({ variant: "destructive", title: "Error", description: "Could not fetch collaborated apps." });
+        });
+
+        return () => {
+            unsubOwned();
+            unsubCollaborated();
+        };
     }
   }, [user, toast]);
+
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -139,10 +160,10 @@ export default function Home() {
         title: "App Created!",
         description: `Redirecting you to the setup page for "${newAppName.trim()}".`,
       });
-      router.push(`/app/${newAppRef.id}/setup`);
+      router.push(`/app/${newAppRef.id}/settings`);
 
     } catch (error: any) {
-       toast({
+      toast({
         variant: "destructive",
         title: "Failed to create app",
         description: error.message || "An unexpected error occurred.",
@@ -289,12 +310,16 @@ export default function Home() {
                                       </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                      <AlertDialogTrigger asChild>
-                                          <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setAppToDelete(app.id); }} className="text-destructive focus:text-destructive">
-                                              <Trash2 className="mr-2 h-4 w-4"/>
-                                              Delete
-                                          </DropdownMenuItem>
-                                      </AlertDialogTrigger>
+                                      {app.isOwner ? (
+                                        <AlertDialogTrigger asChild>
+                                            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setAppToDelete(app.id); }} className="text-destructive focus:text-destructive">
+                                                <Trash2 className="mr-2 h-4 w-4"/>
+                                                Delete
+                                            </DropdownMenuItem>
+                                        </AlertDialogTrigger>
+                                      ) : (
+                                          <DropdownMenuItem disabled>Leave (coming soon)</DropdownMenuItem>
+                                      )}
                                   </DropdownMenuContent>
                               </DropdownMenu>
 
@@ -308,6 +333,11 @@ export default function Home() {
                                         className="object-cover w-full h-40 group-hover:scale-105 transition-transform duration-300"
                                         data-ai-hint="app interface"
                                     />
+                                    {!app.isOwner && (
+                                        <div title="Collaborated App" className="absolute bottom-2 right-2 bg-background/80 backdrop-blur-sm p-1.5 rounded-full">
+                                            <Users className="h-4 w-4 text-primary" />
+                                        </div>
+                                    )}
                                 </CardContent>
                                 <CardHeader>
                                     <CardTitle className="truncate">{app.name}</CardTitle>
