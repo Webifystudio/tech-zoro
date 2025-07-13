@@ -10,7 +10,7 @@ import { collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy,
 
 import { auth, isFirebaseConfigured, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Search, User, MoreVertical, Trash2, Users } from 'lucide-react';
+import { Loader2, Plus, Search, User, MoreVertical, Trash2, Users, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -314,20 +314,26 @@ export default function Home() {
                                   <div className="space-y-2">
                                       <Label htmlFor="name">App Name</Label>
                                       <Input id="name" placeholder="My Awesome App" value={newAppName} onChange={(e) => setNewAppName(e.target.value)} autoFocus required />
-                                        {tutorialLink && (
-                                            <p className="text-xs text-muted-foreground pt-1">
-                                                How to get API keys? <a href={tutorialLink} target="_blank" rel="noopener noreferrer" className="text-primary underline">Click here and watch the tutorial</a>.
-                                            </p>
-                                        )}
                                   </div>
+
                                   <div className="space-y-2">
-                                    <Label>Firebase Configuration</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Label>Firebase Configuration</Label>
+                                        <Link href="/docs#api-setup" target="_blank">
+                                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                                        </Link>
+                                    </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                       <Input placeholder="API Key" value={newFirebaseConfig.apiKey} onChange={(e) => setNewFirebaseConfig(prev => ({...prev, apiKey: e.target.value}))} required />
                                       <Input placeholder="Auth Domain" value={newFirebaseConfig.authDomain} onChange={(e) => setNewFirebaseConfig(prev => ({...prev, authDomain: e.target.value}))} required />
                                       <Input placeholder="Project ID" value={newFirebaseConfig.projectId} onChange={(e) => setNewFirebaseConfig(prev => ({...prev, projectId: e.target.value}))} required />
                                       <Input placeholder="Storage Bucket" value={newFirebaseConfig.storageBucket} onChange={(e) => setNewFirebaseConfig(prev => ({...prev, storageBucket: e.target.value}))} required />
                                     </div>
+                                    {tutorialLink && (
+                                        <p className="text-xs text-muted-foreground pt-1">
+                                            How to get API keys? <a href={tutorialLink} target="_blank" rel="noopener noreferrer" className="text-primary underline">Click here and watch the tutorial</a>.
+                                        </p>
+                                    )}
                                   </div>
                               </div>
                           </ScrollArea>

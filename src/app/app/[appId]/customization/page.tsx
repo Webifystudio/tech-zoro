@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, Palette, Smartphone, Loader2, RefreshCw } from 'lucide-react';
+import { Upload, Palette, Smartphone, Loader2, RefreshCw, HelpCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useParams } from 'next/navigation';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -17,6 +17,7 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { uploadImage } from '@/lib/imgbb';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 interface CustomizationSettings {
   logoUrl: string | null;
@@ -184,10 +185,13 @@ export default function CustomizationPage() {
 
   return (
     <div className="space-y-8">
-      <div>
+      <div className="flex items-center gap-2">
         <h1 className="text-3xl font-bold tracking-tight">Store Customization</h1>
-        <p className="text-muted-foreground">Tailor the look and feel of your online store.</p>
+        <Link href="/docs#customization" target="_blank">
+            <HelpCircle className="h-5 w-5 text-muted-foreground hover:text-primary" />
+        </Link>
       </div>
+      <p className="text-muted-foreground">Tailor the look and feel of your online store.</p>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         <div className="lg:col-span-2 space-y-8">

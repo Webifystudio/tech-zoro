@@ -18,11 +18,12 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, PlusCircle, Trash2, Upload, Instagram, MessageCircle, ShoppingBag, Link as LinkIcon } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Upload, Instagram, MessageCircle, ShoppingBag, Link as LinkIcon, HelpCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 interface Product {
   id: string;
@@ -141,7 +142,7 @@ export default function ProductsPage() {
       reader.readAsDataURL(productImageFile);
       reader.onloadend = async () => {
           const base64Image = reader.result as string;
-          const result = await uploadImage(base64Image, appId);
+          const result = await uploadImage(base64Image);
 
           if (result.error) {
             throw new Error(`Image upload failed: ${result.error}`);
@@ -204,9 +205,14 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Products</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold tracking-tight">Products</h1>
+            <Link href="/docs#product-management" target="_blank">
+                <HelpCircle className="h-5 w-5 text-muted-foreground hover:text-primary" />
+            </Link>
+          </div>
           <p className="text-muted-foreground">Manage the products for your app.</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if(!open) resetForm(); }}>
@@ -375,5 +381,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-
-    
