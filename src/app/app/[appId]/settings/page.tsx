@@ -16,9 +16,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Copy, Upload, KeyRound, ImageIcon } from 'lucide-react';
+import { Loader2, Copy, Upload, KeyRound, ImageIcon, Image as ImageIcon2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface AppSettings {
     name: string;
@@ -44,11 +43,21 @@ export default function AppSettingsPage() {
   const [settings, setSettings] = useState<Partial<AppSettings>>({
     name: '',
     description: '',
+    logoUrl: '',
+    coverUrl: '',
     setup: {
         firebaseConfig: '',
         imgbbApiKey: ''
     }
   });
+
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   
   const [publicUrl, setPublicUrl] = useState('');
 
@@ -87,9 +96,12 @@ export default function AppSettingsPage() {
           setSettings({
               name: appData.name || '',
               description: appData.description || '',
+              logoUrl: appData.logoUrl,
+              coverUrl: appData.coverUrl,
               setup: appData.setup || { firebaseConfig: '', imgbbApiKey: '' }
           });
-
+          setLogoPreview(appData.logoUrl);
+          setCoverPreview(appData.coverUrl);
         } else {
           toast({ variant: 'destructive', title: 'App not found', description: 'The requested app does not exist.' });
           router.push('/');
@@ -119,23 +131,64 @@ export default function AppSettingsPage() {
     }));
   };
 
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>, type: 'logo' | 'cover') => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const previewUrl = URL.createObjectURL(file);
+      if (type === 'logo') {
+        setLogoFile(file);
+        setLogoPreview(previewUrl);
+      } else {
+        setCoverFile(file);
+        setCoverPreview(previewUrl);
+      }
+    }
+  };
+
+
   const handleSaveChanges = async (e: FormEvent) => {
     e.preventDefault();
     if (!db || !appId) return;
     setIsSaving(true);
 
     try {
+      let updatedSettings = { ...settings };
+      
+      const upload = async (file: File) => {
+          const base64Image = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = error => reject(error);
+          });
+          const result = await uploadImage(base64Image, appId);
+          if (result.url) return result.url;
+          throw new Error(`Image upload failed: ${result.error}`);
+      };
+
+      if (logoFile) {
+        updatedSettings.logoUrl = await upload(logoFile);
+      }
+
+      if (coverFile) {
+        updatedSettings.coverUrl = await upload(coverFile);
+      }
+
       const appDocRef = doc(db, 'apps', appId);
       await updateDoc(appDocRef, {
-        name: settings.name,
-        description: settings.description,
-        setup: settings.setup
+        name: updatedSettings.name,
+        description: updatedSettings.description,
+        setup: updatedSettings.setup,
+        logoUrl: updatedSettings.logoUrl,
+        coverUrl: updatedSettings.coverUrl,
       });
       
       toast({
         title: 'Settings Saved',
         description: 'Your application settings have been updated.',
       });
+      setLogoFile(null);
+      setCoverFile(null);
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -228,6 +281,43 @@ export default function AppSettingsPage() {
                     </CardContent>
                 </Card>
 
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Branding Images</CardTitle>
+                        <CardDescription>Upload your app's logo and cover image.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <Label>App Logo</Label>
+                            <input type="file" accept="image/*" ref={logoInputRef} onChange={(e) => handleFileChange(e, 'logo')} className="hidden" />
+                            <Card className="aspect-square border-dashed flex items-center justify-center" onClick={() => logoInputRef.current?.click()}>
+                            {logoPreview ? (
+                                <Image src={logoPreview} alt="Logo preview" width={200} height={200} className="w-full h-full object-contain rounded-md p-4" />
+                            ) : (
+                                <div className="text-center cursor-pointer p-4">
+                                <ImageIcon2 className="mx-auto h-12 w-12 text-muted-foreground" />
+                                <p className="mt-2 text-sm text-muted-foreground">Click to upload logo</p>
+                                </div>
+                            )}
+                            </Card>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Cover Image</Label>
+                            <input type="file" accept="image/*" ref={coverInputRef} onChange={(e) => handleFileChange(e, 'cover')} className="hidden" />
+                            <Card className="aspect-square border-dashed flex items-center justify-center" onClick={() => coverInputRef.current?.click()}>
+                            {coverPreview ? (
+                                <Image src={coverPreview} alt="Cover preview" width={200} height={200} className="w-full h-full object-cover rounded-md" />
+                            ) : (
+                                <div className="text-center cursor-pointer p-4">
+                                <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
+                                <p className="mt-2 text-sm text-muted-foreground">Click to upload cover</p>
+                                </div>
+                            )}
+                            </Card>
+                        </div>
+                    </CardContent>
+                </Card>
+
                  <Card>
                     <CardHeader>
                         <div className="flex items-center gap-3">
@@ -285,5 +375,3 @@ export default function AppSettingsPage() {
     </form>
   );
 }
-
-    

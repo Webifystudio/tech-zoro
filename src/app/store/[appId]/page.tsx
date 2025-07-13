@@ -34,6 +34,8 @@ interface Category {
 interface AppData {
   name: string;
   description?: string;
+  logoUrl?: string;
+  coverUrl?: string;
   customization?: {
     logoUrl?: string;
     coverUrl?: string;
@@ -121,6 +123,8 @@ export default function StorefrontPage() {
       </Link>
     )
   }
+  
+  const coverImageUrl = appData?.coverUrl || appData?.customization?.coverUrl;
 
   if (isLoading) {
     return (
@@ -145,8 +149,8 @@ export default function StorefrontPage() {
   return (
     <>
       <section className="relative w-full h-80 md:h-96 bg-muted/40 flex items-center justify-center text-center p-4">
-          {appData?.customization?.coverUrl && (
-              <Image src={appData.customization.coverUrl} layout="fill" objectFit="cover" alt="Store banner" className="opacity-30" data-ai-hint="website banner" />
+          {coverImageUrl && (
+              <Image src={coverImageUrl} layout="fill" objectFit="cover" alt="Store banner" className="opacity-30" data-ai-hint="website banner" />
           )}
           <div className="relative z-10 max-w-2xl">
               <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-foreground">{appData?.name || 'Welcome to Our Store'}</h1>
@@ -232,5 +236,3 @@ export default function StorefrontPage() {
     </>
   );
 }
-
-    

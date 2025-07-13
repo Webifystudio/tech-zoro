@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import Image from 'next/image';
 import Link from 'next/link';
-import { collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy, deleteDoc, doc, getDocs } from 'firebase/firestore';
+import { collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy, deleteDoc, doc, getDocs, getDoc } from 'firebase/firestore';
 
 import { auth, isFirebaseConfigured, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
@@ -65,6 +65,7 @@ export default function Home() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreatingApp, setIsCreatingApp] = useState(false);
   const [appToDelete, setAppToDelete] = useState<string | null>(null);
+  const [tutorialLink, setTutorialLink] = useState('');
 
   // Form state for the creation dialog
   const [newAppName, setNewAppName] = useState('');
@@ -88,6 +89,19 @@ export default function Home() {
 
     return () => unsubscribe();
   }, [router]);
+  
+  useEffect(() => {
+    if (db) {
+      const fetchSettings = async () => {
+        const settingsRef = doc(db, 'settings', 'general');
+        const docSnap = await getDoc(settingsRef);
+        if (docSnap.exists()) {
+          setTutorialLink(docSnap.data().tutorialLink || '');
+        }
+      };
+      fetchSettings();
+    }
+  }, []);
 
   useEffect(() => {
     if (user && db) {
@@ -172,7 +186,7 @@ export default function Home() {
       router.push(`/app/${newAppRef.id}`);
 
     } catch (error: any) {
-      toast({
+        toast({
             variant: "destructive",
             title: "Failed to create app",
             description: error.message || "An unexpected error occurred.",
@@ -242,6 +256,14 @@ export default function Home() {
                       <span>Profile</span>
                     </Link>
                   </DropdownMenuItem>
+                   {user.email === 'xpnetwork.tech@gmail.com' && (
+                    <DropdownMenuItem asChild className="cursor-pointer">
+                        <Link href="/admin">
+                            <User className="mr-2 h-4 w-4" />
+                            <span>Admin Panel</span>
+                        </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive">
                     Logout
@@ -303,9 +325,6 @@ export default function Home() {
                                           className="font-mono text-xs"
                                           required
                                       />
-                                      <p className="text-xs text-muted-foreground">
-                                        In your Firebase project, go to Project Settings &gt; General. Find your web app and copy the config object.
-                                      </p>
                                   </div>
                                   <div className="space-y-2">
                                       <Label htmlFor="imgbbApiKey">ImgBB API Key</Label>
@@ -316,10 +335,12 @@ export default function Home() {
                                           onChange={(e) => setNewImgbbApiKey(e.target.value)}
                                           required
                                       />
-                                      <p className="text-xs text-muted-foreground">
-                                        Login to <a href="https://imgbb.com/" target="_blank" rel="noopener noreferrer" className="underline">ImgBB</a>, navigate to the "API" page from the menu, and generate your API key.
-                                      </p>
                                   </div>
+                                  {tutorialLink && (
+                                    <p className="text-sm text-muted-foreground">
+                                        Need help finding these keys? <a href={tutorialLink} target="_blank" rel="noopener noreferrer" className="text-primary underline">Click here and watch the tutorial</a>.
+                                    </p>
+                                  )}
                               </div>
                           </ScrollArea>
                           <DialogFooter className="pt-4">
@@ -420,5 +441,3 @@ export default function Home() {
 
   return null;
 }
-
-    
