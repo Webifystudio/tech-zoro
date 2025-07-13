@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { collection, query, where, onSnapshot, orderBy, doc, getDoc, updateDoc } from 'firebase/firestore';
 
 import { auth, isFirebaseConfigured, db } from '@/lib/firebase';
-import { uploadImage } from '@/lib/imgbb';
+import { uploadImageForProfile } from '@/lib/imgbb';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -131,9 +131,9 @@ export default function ProfilePage() {
           reader.onload = () => resolve(reader.result as string);
           reader.onerror = error => reject(error);
         });
-        const result = await uploadImage(base64Image, `user-${user.uid}-${type}`);
+        const result = await uploadImageForProfile(base64Image);
         if(result.url) return result.url;
-        throw new Error(`${type} upload failed`);
+        throw new Error(`${type} upload failed: ${result.error}`);
       };
 
       if (avatarFile) avatarUrl = await upload(avatarFile, 'avatar');
@@ -151,7 +151,7 @@ export default function ProfilePage() {
         photoURL: avatarUrl,
         bannerUrl: newBannerUrl,
         backgroundUrl: newBackgroundUrl,
-      });
+      }, { merge: true });
 
       setUser(auth.currentUser);
       
@@ -197,7 +197,7 @@ export default function ProfilePage() {
       </header>
 
       <main className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
-        <Card className={isGlassEnabled ? 'glass-card' : ''}>
+        <Card className={theme === 'glass' ? 'glass-card' : ''}>
           <CardHeader className="p-0">
             <div className="relative">
               <input type="file" accept="image/*" ref={bannerInputRef} onChange={(e) => handleFileChange(e, 'banner')} className="hidden" />
