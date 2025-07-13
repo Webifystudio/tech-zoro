@@ -46,7 +46,8 @@ export default function ProfilePage() {
   
   const [apps, setApps] = useState<{ id: string; name: string }[]>([]);
 
-  const [theme, setTheme] = useLocalStorage<'default' | 'dark' | 'glass'>('theme', 'default');
+  const [theme, setTheme] = useLocalStorage<'default' | 'dark' | 'glass' | 'gradient'>('theme', 'default');
+  const [nitroEnabled, setNitroEnabled] = useLocalStorage<boolean>('nitro_theme_enabled', false);
   const isGlassEnabled = theme === 'glass';
 
   useEffect(() => {
@@ -72,6 +73,9 @@ export default function ProfilePage() {
                 if (userData.theme) {
                     setTheme(userData.theme);
                 }
+                 if(userData.nitroEnabled) {
+                    setNitroEnabled(userData.nitroEnabled);
+                }
             } else {
                  setBannerPreview('https://placehold.co/1200x300.png');
             }
@@ -81,7 +85,7 @@ export default function ProfilePage() {
     });
 
     return () => unsubscribe();
-  }, [router, setTheme]);
+  }, [router, setTheme, setNitroEnabled]);
 
   useEffect(() => {
     if (user && db) {
@@ -93,15 +97,26 @@ export default function ProfilePage() {
       return () => unsubscribe();
     }
   }, [user]);
+
+  const updateUserDoc = (data: { [key: string]: any }) => {
+      if (user && db) {
+        const userDocRef = doc(db, 'users', user.uid);
+        setDoc(userDocRef, data, { merge: true });
+      }
+  }
   
   const handleThemeToggle = (enabled: boolean) => {
     const newTheme = enabled ? 'glass' : 'default';
     setTheme(newTheme);
+    if(nitroEnabled) setNitroEnabled(false);
+    updateUserDoc({ theme: newTheme, nitroEnabled: false });
+  };
 
-    if(user && db) {
-       const userDocRef = doc(db, 'users', user.uid);
-       setDoc(userDocRef, { theme: newTheme }, { merge: true });
-    }
+  const handleNitroToggle = (enabled: boolean) => {
+    setNitroEnabled(enabled);
+    const newTheme = enabled ? 'gradient' : 'default';
+    setTheme(newTheme);
+    updateUserDoc({ nitroEnabled: enabled, theme: newTheme });
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner' | 'background') => {
@@ -262,8 +277,22 @@ export default function ProfilePage() {
 
               <div className="space-y-4">
                  <h3 className="text-lg font-semibold">Theme Settings</h3>
-
-                 <div className="flex items-center justify-between rounded-lg border p-4">
+                 <div className={cn("flex items-center justify-between rounded-lg border p-4", theme === 'glass' && 'glass-card')}>
+                    <div className="space-y-0.5">
+                      <Label htmlFor="nitro-theme" className="text-base">
+                        Enable Nitro Theme
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Give your dashboard a premium, gradient look.
+                      </p>
+                    </div>
+                    <Switch
+                      id="nitro-theme"
+                      checked={nitroEnabled}
+                      onCheckedChange={handleNitroToggle}
+                    />
+                  </div>
+                 <div className={cn("flex items-center justify-between rounded-lg border p-4", theme === 'glass' && 'glass-card')}>
                     <div className="space-y-0.5">
                       <Label htmlFor="glass-effect" className="text-base">
                         Enable Glass Effect
@@ -284,7 +313,7 @@ export default function ProfilePage() {
 
                 <div className="space-y-4">
                     <h3 className="text-lg font-semibold">Custom Background</h3>
-                     <Card className="p-4 border-dashed glass-card">
+                     <Card className={cn("p-4 border-dashed", theme === 'glass' && 'glass-card')}>
                         <input type="file" accept="image/*" ref={backgroundInputRef} onChange={(e) => handleFileChange(e, 'background')} className="hidden" />
                         {backgroundPreview ? (
                           <div className="relative group">
