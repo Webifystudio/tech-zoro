@@ -3,7 +3,7 @@
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
-const ZORO_FALLBACK_IMGBB_API_KEY = "5a0b943534573887c0a8d8d7f8582d1c";
+const ZORO_FALLBACK_IMGBB_API_KEY = "cebcb7546aca25ed5c92ab3ff6491b1c";
 
 export async function uploadImageForProfile(
   base64Image: string
