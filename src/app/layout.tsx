@@ -54,7 +54,7 @@ export default function RootLayout({
   }
 
   return (
-    <html lang="en" suppressHydrationWarning data-theme={theme === 'glass' ? 'glass' : undefined}>
+    <html lang="en" suppressHydrationWarning className={theme === 'glass' ? 'theme-glass' : ''}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

@@ -69,7 +69,9 @@ export default function ProfilePage() {
                 const userData = userDocSnap.data();
                 setBannerPreview(userData.bannerUrl || 'https://placehold.co/1200x300.png');
                 setBackgroundPreview(userData.backgroundUrl);
-                setTheme(userData.theme || 'default');
+                if (userData.theme) {
+                    setTheme(userData.theme);
+                }
             } else {
                  setBannerPreview('https://placehold.co/1200x300.png');
             }
@@ -100,7 +102,6 @@ export default function ProfilePage() {
        const userDocRef = doc(db, 'users', user.uid);
        setDoc(userDocRef, { theme: newTheme }, { merge: true });
     }
-    // No full reload, let React handle state changes
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner' | 'background') => {
@@ -246,7 +247,7 @@ export default function ProfilePage() {
             </div>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSaveProfile} className="space-y-6">
+            <form onSubmit={handleSaveProfile} className="space-y-8">
               <div className="space-y-2">
                 <Label htmlFor="displayName">Display Name</Label>
                 <Input
@@ -283,7 +284,7 @@ export default function ProfilePage() {
 
                 <div className="space-y-4">
                     <h3 className="text-lg font-semibold">Custom Background</h3>
-                     <Card className="p-4 border-dashed">
+                     <Card className="p-4 border-dashed glass-card">
                         <input type="file" accept="image/*" ref={backgroundInputRef} onChange={(e) => handleFileChange(e, 'background')} className="hidden" />
                         {backgroundPreview ? (
                           <div className="relative group">
@@ -315,7 +316,7 @@ export default function ProfilePage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {apps.map(app => (
                       <Link href={`/app/${app.id}`} key={app.id}>
-                        <div className="border rounded-lg p-4 hover:bg-muted transition-colors cursor-pointer">
+                        <div className={cn("border rounded-lg p-4 hover:bg-muted transition-colors cursor-pointer", theme === 'glass' && 'glass-card')}>
                           <p className="font-semibold truncate">{app.name}</p>
                         </div>
                       </Link>
@@ -325,7 +326,7 @@ export default function ProfilePage() {
                   <p className="text-sm text-muted-foreground">You haven't created any apps yet. <Link href="/" className="text-primary hover:underline">Create one now!</Link></p>
                 )}
               </div>
-              <CardFooter className="p-0 pt-6 flex justify-end">
+              <CardFooter className="p-0 pt-8 flex justify-end">
                 <Button type="submit" disabled={isSaving}>
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Changes
