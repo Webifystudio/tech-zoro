@@ -18,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const [isMounted, setIsMounted] = useState(false);
-  const [theme, setTheme] = useLocalStorage<'default' | 'dark' | 'glass'>('theme', 'default');
+  const [theme] = useLocalStorage<'default' | 'dark' | 'glass'>('theme', 'default');
   const [backgroundUrl, setBackgroundUrl] = useState('');
   const pathname = usePathname();
 
@@ -34,16 +34,13 @@ export default function RootLayout({
                 if(userData.backgroundUrl) {
                     setBackgroundUrl(userData.backgroundUrl);
                 }
-                if(userData.theme) {
-                    setTheme(userData.theme);
-                }
             }
         }
     });
 
     return () => unsubscribe();
 
-  }, [setTheme]);
+  }, []);
   
   const isStorePath = pathname.startsWith('/store');
   const isAuthPath = pathname === '/login' || pathname === '/register';
@@ -57,7 +54,7 @@ export default function RootLayout({
   }
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning data-theme={theme === 'glass' ? 'glass' : undefined}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -70,7 +67,6 @@ export default function RootLayout({
         style={{
             backgroundImage: theme === 'glass' && backgroundUrl ? `url(${backgroundUrl})` : 'none'
         }}
-        data-theme={theme === 'glass' ? 'glass' : undefined}
       >
         <ThemeProvider
             attribute="class"

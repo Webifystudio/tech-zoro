@@ -21,7 +21,7 @@ import { Loader2, Upload, Camera, ImageIcon } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { Separator } from '@/components/ui/separator';
-import { useTheme } from 'next-themes';
+import { cn } from '@/lib/utils';
 
 
 export default function ProfilePage() {
@@ -69,6 +69,7 @@ export default function ProfilePage() {
                 const userData = userDocSnap.data();
                 setBannerPreview(userData.bannerUrl || 'https://placehold.co/1200x300.png');
                 setBackgroundPreview(userData.backgroundUrl);
+                setTheme(userData.theme || 'default');
             } else {
                  setBannerPreview('https://placehold.co/1200x300.png');
             }
@@ -78,7 +79,7 @@ export default function ProfilePage() {
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, [router, setTheme]);
 
   useEffect(() => {
     if (user && db) {
@@ -92,9 +93,14 @@ export default function ProfilePage() {
   }, [user]);
   
   const handleThemeToggle = (enabled: boolean) => {
-    setTheme(enabled ? 'glass' : 'default');
-    // Reload to apply new background styles from root layout
-    window.location.reload();
+    const newTheme = enabled ? 'glass' : 'default';
+    setTheme(newTheme);
+
+    if(user && db) {
+       const userDocRef = doc(db, 'users', user.uid);
+       setDoc(userDocRef, { theme: newTheme }, { merge: true });
+    }
+    // No full reload, let React handle state changes
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner' | 'background') => {
@@ -197,7 +203,7 @@ export default function ProfilePage() {
       </header>
 
       <main className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
-        <Card className={theme === 'glass' ? 'glass-card' : ''}>
+        <Card className={cn(theme === 'glass' && 'glass-card')}>
           <CardHeader className="p-0">
             <div className="relative">
               <input type="file" accept="image/*" ref={bannerInputRef} onChange={(e) => handleFileChange(e, 'banner')} className="hidden" />
