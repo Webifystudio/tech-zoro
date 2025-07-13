@@ -2,7 +2,7 @@
 "use client";
 
 import { Sidebar, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarContent } from '@/components/ui/sidebar';
-import { LayoutDashboard, ShieldCheck, LogOut, Settings } from 'lucide-react';
+import { LayoutDashboard, ShieldCheck, LogOut, Settings, Globe } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'firebase/auth';
@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 const menuItems = [
     { href: `/admin`, label: 'Dashboard', icon: LayoutDashboard },
     { href: `/admin/access`, label: 'Access', icon: ShieldCheck },
+    { href: `/admin/domains`, label: 'Domains', icon: Globe },
     { href: `/admin/settings`, label: 'Settings', icon: Settings },
 ];
 
