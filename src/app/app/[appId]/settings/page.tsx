@@ -152,36 +152,45 @@ export default function AppSettingsPage() {
     setIsSaving(true);
 
     try {
-      let updatedSettings = { ...settings };
-      
-      const upload = async (file: File) => {
-          const base64Image = await new Promise<string>((resolve, reject) => {
+      let logoUrl = settings.logoUrl;
+      let coverUrl = settings.coverUrl;
+
+      const fileToBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = () => resolve(reader.result as string);
             reader.onerror = error => reject(error);
-          });
-          // This is the corrected part: passing appId to uploadImage
-          const result = await uploadImage(base64Image, appId);
-          if (result.url) return result.url;
-          throw new Error(`Image upload failed: ${result.error}`);
+        });
       };
 
       if (logoFile) {
-        updatedSettings.logoUrl = await upload(logoFile);
+        const base64Image = await fileToBase64(logoFile);
+        const result = await uploadImage(base64Image, appId);
+        if (result.url) {
+            logoUrl = result.url;
+        } else {
+            throw new Error(`Logo upload failed: ${result.error}`);
+        }
       }
 
       if (coverFile) {
-        updatedSettings.coverUrl = await upload(coverFile);
+        const base64Image = await fileToBase64(coverFile);
+        const result = await uploadImage(base64Image, appId);
+        if (result.url) {
+            coverUrl = result.url;
+        } else {
+            throw new Error(`Cover image upload failed: ${result.error}`);
+        }
       }
 
       const appDocRef = doc(db, 'apps', appId);
       await updateDoc(appDocRef, {
-        name: updatedSettings.name,
-        description: updatedSettings.description,
-        setup: updatedSettings.setup,
-        logoUrl: updatedSettings.logoUrl,
-        coverUrl: updatedSettings.coverUrl,
+        name: settings.name,
+        description: settings.description,
+        setup: settings.setup,
+        logoUrl: logoUrl,
+        coverUrl: coverUrl,
       });
       
       toast({
