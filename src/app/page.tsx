@@ -299,6 +299,11 @@ export default function Home() {
                           <DialogDescription>
                               Enter a name for your new application and provide the necessary keys to get started.
                           </DialogDescription>
+                          {tutorialLink && (
+                            <p className="text-sm text-muted-foreground pt-2">
+                                How to get API keys? <a href={tutorialLink} target="_blank" rel="noopener noreferrer" className="text-primary underline">Click here and watch the tutorial</a>.
+                            </p>
+                            )}
                       </DialogHeader>
                       <form onSubmit={handleCreateApp}>
                           <ScrollArea className="max-h-[70vh] p-1">
@@ -336,11 +341,6 @@ export default function Home() {
                                           required
                                       />
                                   </div>
-                                  {tutorialLink && (
-                                    <p className="text-sm text-muted-foreground">
-                                        Need help finding these keys? <a href={tutorialLink} target="_blank" rel="noopener noreferrer" className="text-primary underline">Click here and watch the tutorial</a>.
-                                    </p>
-                                  )}
                               </div>
                           </ScrollArea>
                           <DialogFooter className="pt-4">
@@ -411,7 +411,7 @@ export default function Home() {
                       <div className="bg-primary/10 p-4 rounded-full">
                           <Plus className="h-8 w-8 text-primary" />
                       </div>
-                      <h2 className="mt-6 text-2xl font-semibold">Create your first app</h2>
+                      <h2 className="mt-2 text-2xl font-semibold">Create your first app</h2>
                       <p className="mt-2 text-muted-foreground max-w-xs">
                           Get started by clicking the plus button to create your first application.
                       </p>
