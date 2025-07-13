@@ -1,9 +1,31 @@
 
 'use server';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
+import { getFirestore, doc, getDoc, type Firestore } from "firebase/firestore";
 
 const ZORO_FALLBACK_IMGBB_API_KEY = "cebcb7546aca25ed5c92ab3ff6491b1c";
+
+// This is a separate admin-like initialization for server-side actions.
+// It should not be bundled with client-side code.
+const firebaseConfig = {
+  apiKey: "AIzaSyBPDoh0znVAGCKNav2qX9gqh4eVGSoDLi0",
+  authDomain: "tech-zoro.firebaseapp.com",
+  databaseURL: "https://tech-zoro-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "tech-zoro",
+  storageBucket: "tech-zoro.firebasestorage.app",
+  messagingSenderId: "588736971823",
+  appId: "1:588736971823:web:571ca28714cba8136032da",
+  measurementId: "G-8L19QD2GKM"
+};
+
+let adminApp: FirebaseApp;
+if (!getApps().some(app => app.name === 'admin')) {
+  adminApp = initializeApp(firebaseConfig, 'admin');
+} else {
+  adminApp = getApps().find(app => app.name === 'admin')!;
+}
+const adminDb: Firestore = getFirestore(adminApp);
+
 
 export async function uploadImageForProfile(
   base64Image: string
@@ -45,12 +67,12 @@ export async function uploadImage(
   appId: string
 ): Promise<{url: string; error?: undefined} | {error: string; url?: undefined}> {
   
-  if (!db || !appId) {
-    return { error: 'Database or App ID not configured for image upload.' };
+  if (!appId) {
+    return { error: 'App ID is required for image upload.' };
   }
 
   try {
-    const appRef = doc(db, 'apps', appId);
+    const appRef = doc(adminDb, 'apps', appId);
     const appSnap = await getDoc(appRef);
 
     if (!appSnap.exists()) {
