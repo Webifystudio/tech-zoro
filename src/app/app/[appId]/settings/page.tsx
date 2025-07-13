@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Copy, Upload, KeyRound, ImageIcon, Image as ImageIcon2 } from 'lucide-react';
+import { Loader2, Copy, Upload, Image as ImageIcon2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface AppSettings {
@@ -24,9 +24,6 @@ interface AppSettings {
     description: string;
     logoUrl?: string;
     coverUrl?: string;
-    setup: {
-        firebaseConfig: string;
-    }
 }
 
 export default function AppSettingsPage() {
@@ -44,9 +41,6 @@ export default function AppSettingsPage() {
     description: '',
     logoUrl: '',
     coverUrl: '',
-    setup: {
-        firebaseConfig: '',
-    }
   });
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -94,12 +88,11 @@ export default function AppSettingsPage() {
           setSettings({
               name: appData.name || '',
               description: appData.description || '',
-              logoUrl: appData.logoUrl,
-              coverUrl: appData.coverUrl,
-              setup: appData.setup || { firebaseConfig: '' }
+              logoUrl: appData.customization?.logoUrl || '',
+              coverUrl: appData.customization?.coverUrl || '',
           });
-          setLogoPreview(appData.logoUrl);
-          setCoverPreview(appData.coverUrl);
+          setLogoPreview(appData.customization?.logoUrl);
+          setCoverPreview(appData.customization?.coverUrl);
         } else {
           toast({ variant: 'destructive', title: 'App not found', description: 'The requested app does not exist.' });
           router.push('/');
@@ -115,18 +108,8 @@ export default function AppSettingsPage() {
     fetchAppData();
   }, [user, appId, router, toast]);
 
-  const handleInputChange = (field: keyof Omit<AppSettings, 'setup'>, value: string) => {
+  const handleInputChange = (field: keyof AppSettings, value: string) => {
     setSettings(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSetupChange = (field: 'firebaseConfig', value: string) => {
-    setSettings(prev => ({
-        ...prev,
-        setup: {
-            ...(prev.setup || { firebaseConfig: '' }),
-            [field]: value
-        }
-    }));
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>, type: 'logo' | 'cover') => {
@@ -186,9 +169,8 @@ export default function AppSettingsPage() {
       await updateDoc(appDocRef, {
         name: settings.name,
         description: settings.description,
-        setup: settings.setup,
-        logoUrl: logoUrl,
-        coverUrl: coverUrl,
+        'customization.logoUrl': logoUrl,
+        'customization.coverUrl': coverUrl,
       });
       
       toast({
@@ -325,25 +307,6 @@ export default function AppSettingsPage() {
                         </div>
                     </CardContent>
                 </Card>
-
-                 <Card>
-                    <CardHeader>
-                        <div className="flex items-center gap-3">
-                            <KeyRound className="h-6 w-6 text-primary" />
-                            <CardTitle>Firebase Configuration</CardTitle>
-                        </div>
-                        <CardDescription>
-                            Update your app's Firebase project configuration.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-2">
-                            <Label htmlFor="firebaseConfig">Firebase Config Object</Label>
-                            <Textarea id="firebaseConfig" placeholder="{ apiKey: '...', authDomain: '...', ... }" value={settings.setup?.firebaseConfig} onChange={(e) => handleSetupChange('firebaseConfig', e.target.value)} rows={8} className="font-mono"/>
-                        </div>
-                    </CardContent>
-                </Card>
-
             </div>
             <div className="lg:col-span-1 space-y-8">
                 <Card>

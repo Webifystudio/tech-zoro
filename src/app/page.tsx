@@ -45,7 +45,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -53,6 +52,13 @@ interface App {
     id: string;
     name: string;
     isOwner: boolean;
+}
+
+interface FirebaseConfig {
+    apiKey: string;
+    authDomain: string;
+    projectId: string;
+    storageBucket: string;
 }
 
 export default function Home() {
@@ -69,7 +75,12 @@ export default function Home() {
 
   // Form state for the creation dialog
   const [newAppName, setNewAppName] = useState('');
-  const [newFirebaseConfig, setNewFirebaseConfig] = useState('');
+  const [newFirebaseConfig, setNewFirebaseConfig] = useState<FirebaseConfig>({
+    apiKey: '',
+    authDomain: '',
+    projectId: '',
+    storageBucket: ''
+  });
   
   useEffect(() => {
     if (!isFirebaseConfigured || !auth) {
@@ -152,12 +163,12 @@ export default function Home() {
 
   const resetForm = () => {
     setNewAppName('');
-    setNewFirebaseConfig('');
+    setNewFirebaseConfig({ apiKey: '', authDomain: '', projectId: '', storageBucket: '' });
   };
 
   const handleCreateApp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAppName.trim() || !newFirebaseConfig.trim() || !user || !db) {
+    if (!newAppName.trim() || !Object.values(newFirebaseConfig).every(v => v.trim()) || !user || !db) {
       toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all the required fields.'});
       return;
     }
@@ -307,26 +318,16 @@ export default function Home() {
                               <div className="grid gap-4 py-4">
                                   <div className="space-y-2">
                                       <Label htmlFor="name">App Name</Label>
-                                      <Input
-                                          id="name"
-                                          placeholder="My Awesome App"
-                                          value={newAppName}
-                                          onChange={(e) => setNewAppName(e.target.value)}
-                                          autoFocus
-                                          required
-                                      />
+                                      <Input id="name" placeholder="My Awesome App" value={newAppName} onChange={(e) => setNewAppName(e.target.value)} autoFocus required />
                                   </div>
                                   <div className="space-y-2">
-                                      <Label htmlFor="firebaseConfig">Firebase Config</Label>
-                                       <Textarea
-                                          id="firebaseConfig"
-                                          placeholder="{ apiKey: '...', authDomain: '...', ... }"
-                                          value={newFirebaseConfig}
-                                          onChange={(e) => setNewFirebaseConfig(e.target.value)}
-                                          rows={6}
-                                          className="font-mono text-xs"
-                                          required
-                                      />
+                                    <Label>Firebase Configuration</Label>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                      <Input placeholder="API Key" value={newFirebaseConfig.apiKey} onChange={(e) => setNewFirebaseConfig(prev => ({...prev, apiKey: e.target.value}))} required />
+                                      <Input placeholder="Auth Domain" value={newFirebaseConfig.authDomain} onChange={(e) => setNewFirebaseConfig(prev => ({...prev, authDomain: e.target.value}))} required />
+                                      <Input placeholder="Project ID" value={newFirebaseConfig.projectId} onChange={(e) => setNewFirebaseConfig(prev => ({...prev, projectId: e.target.value}))} required />
+                                      <Input placeholder="Storage Bucket" value={newFirebaseConfig.storageBucket} onChange={(e) => setNewFirebaseConfig(prev => ({...prev, storageBucket: e.target.value}))} required />
+                                    </div>
                                   </div>
                               </div>
                           </ScrollArea>

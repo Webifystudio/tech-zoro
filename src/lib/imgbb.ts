@@ -1,7 +1,5 @@
 
 'use server';
-import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { getFirestore, doc, getDoc, type Firestore } from "firebase/firestore";
 
 const ZORO_FALLBACK_IMGBB_API_KEY = "cebcb7546aca25ed5c92ab3ff6491b1c";
 
@@ -41,7 +39,7 @@ export async function uploadImageForProfile(
 
 
 export async function uploadImage(
-  base64Image: string,
+  base64Image: string
 ): Promise<{url: string; error?: undefined} | {error: string; url?: undefined}> {
   try {
     const formData = new FormData();

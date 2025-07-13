@@ -1,36 +1,35 @@
+
 "use client";
 
-import type { FormEvent, ChangeEvent } from 'react';
-import { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
+import type { FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useParams, useRouter } from 'next/navigation';
 
 import { auth, db } from '@/lib/firebase';
-import { uploadImage } from '@/lib/imgbb';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Copy, Upload, KeyRound, ImageIcon } from 'lucide-react';
+import { Loader2, KeyRound } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+
+interface FirebaseConfig {
+    apiKey: string;
+    authDomain: string;
+    projectId: string;
+    storageBucket: string;
+}
 
 interface AppSettings {
-    name: string;
-    description: string;
-    logoUrl?: string;
-    coverUrl?: string;
     setup: {
-        firebaseConfig: string;
-        imgbbApiKey: string;
+        firebaseConfig: FirebaseConfig;
     }
 }
 
-export default function AppSettingsPage() {
+export default function AppSetupPage() {
   const { toast } = useToast();
   const router = useRouter();
   const params = useParams();
@@ -41,21 +40,15 @@ export default function AppSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   
   const [settings, setSettings] = useState<Partial<AppSettings>>({
-    name: '',
-    description: '',
     setup: {
-        firebaseConfig: '',
-        imgbbApiKey: ''
+        firebaseConfig: {
+            apiKey: '',
+            authDomain: '',
+            projectId: '',
+            storageBucket: ''
+        },
     }
   });
-  
-  const [publicUrl, setPublicUrl] = useState('');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && appId) {
-      setPublicUrl(`${window.location.origin}/store/${appId}`);
-    }
-  }, [appId]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -84,11 +77,8 @@ export default function AppSettingsPage() {
             return;
           }
           setSettings({
-              name: appData.name || '',
-              description: appData.description || '',
-              setup: appData.setup || { firebaseConfig: '', imgbbApiKey: '' }
+              setup: appData.setup || { firebaseConfig: { apiKey: '', authDomain: '', projectId: '', storageBucket: '' } }
           });
-
         } else {
           toast({ variant: 'destructive', title: 'App not found', description: 'The requested app does not exist.' });
           router.push('/');
@@ -104,16 +94,15 @@ export default function AppSettingsPage() {
     fetchAppData();
   }, [user, appId, router, toast]);
 
-  const handleInputChange = (field: keyof Omit<AppSettings, 'setup'>, value: string) => {
-    setSettings(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSetupChange = (field: 'firebaseConfig' | 'imgbbApiKey', value: string) => {
+  const handleConfigChange = (field: keyof FirebaseConfig, value: string) => {
     setSettings(prev => ({
         ...prev,
         setup: {
-            ...(prev.setup || { firebaseConfig: '', imgbbApiKey: '' }),
-            [field]: value
+            ...prev.setup,
+            firebaseConfig: {
+                ...prev.setup?.firebaseConfig,
+                [field]: value
+            }
         }
     }));
   };
@@ -126,8 +115,6 @@ export default function AppSettingsPage() {
     try {
       const appDocRef = doc(db, 'apps', appId);
       await updateDoc(appDocRef, {
-        name: settings.name,
-        description: settings.description,
         setup: settings.setup
       });
       
@@ -144,15 +131,6 @@ export default function AppSettingsPage() {
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleCopyLink = () => {
-    if (!publicUrl) return;
-    navigator.clipboard.writeText(publicUrl);
-    toast({
-      title: 'Link Copied!',
-      description: 'Your public store URL is now on your clipboard.',
-    });
   };
 
   if (isLoading || !user) {
@@ -172,9 +150,9 @@ export default function AppSettingsPage() {
               <Skeleton className="h-6 w-32" />
               <Skeleton className="h-10 w-full" />
             </div>
-            <div className="space-y-2">
+             <div className="space-y-2">
               <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-10 w-full" />
             </div>
           </CardContent>
           <CardFooter className="border-t px-6 py-4">
@@ -185,13 +163,15 @@ export default function AppSettingsPage() {
     );
   }
 
+  const config = settings.setup?.firebaseConfig || { apiKey: '', authDomain: '', projectId: '', storageBucket: '' };
+
   return (
     <form onSubmit={handleSaveChanges}>
         <div className="space-y-8">
         <div className="flex items-center justify-between">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">App Settings</h1>
-                <p className="text-muted-foreground">Manage your application's configuration and public details.</p>
+                <h1 className="text-3xl font-bold tracking-tight">App Setup</h1>
+                <p className="text-muted-foreground">Manage your application's technical configuration.</p>
             </div>
             <Button type="submit" disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -199,87 +179,38 @@ export default function AppSettingsPage() {
             </Button>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-3">
-            <div className="lg:col-span-2 space-y-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>General Settings</CardTitle>
-                        <CardDescription>Update your app's public information.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="space-y-2">
-                        <Label htmlFor="appName">Website Name</Label>
-                        <Input
-                            id="appName"
-                            value={settings.name}
-                            onChange={(e) => handleInputChange('name', e.target.value)}
-                        />
-                        </div>
-                        <div className="space-y-2">
-                        <Label htmlFor="appDescription">Website Description</Label>
-                        <Textarea
-                            id="appDescription"
-                            value={settings.description}
-                            onChange={(e) => handleInputChange('description', e.target.value)}
-                            placeholder="Tell us about your website"
-                        />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                 <Card>
-                    <CardHeader>
-                        <div className="flex items-center gap-3">
-                            <KeyRound className="h-6 w-6 text-primary" />
-                            <CardTitle>Firebase Configuration</CardTitle>
-                        </div>
-                        <CardDescription>
-                            Update your app's Firebase project configuration.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-2">
-                            <Label htmlFor="firebaseConfig">Firebase Config Object</Label>
-                            <Textarea id="firebaseConfig" placeholder="{ apiKey: '...', authDomain: '...', ... }" value={settings.setup?.firebaseConfig} onChange={(e) => handleSetupChange('firebaseConfig', e.target.value)} rows={8} className="font-mono"/>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center gap-3">
-                            <ImageIcon className="h-6 w-6 text-primary" />
-                            <CardTitle>ImgBB API Key</CardTitle>
-                        </div>
-                        <CardDescription>
-                            Update your ImgBB API key for image hosting.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-2">
-                            <Label htmlFor="imgbbApiKey">API Key</Label>
-                            <Input id="imgbbApiKey" placeholder="Your ImgBB API Key" value={settings.setup?.imgbbApiKey} onChange={(e) => handleSetupChange('imgbbApiKey', e.target.value)} />
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-            <div className="lg:col-span-1 space-y-8">
-                <Card>
-                    <CardHeader>
-                    <CardTitle>Share Your Store</CardTitle>
-                    <CardDescription>This is the public link to your storefront.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                    <div className="flex gap-2">
-                        <Input value={publicUrl} readOnly />
-                        <Button type="button" variant="outline" size="icon" onClick={handleCopyLink} aria-label="Copy public URL">
-                        <Copy className="h-4 w-4" />
-                        </Button>
+        <Card>
+            <CardHeader>
+                <div className="flex items-center gap-3">
+                    <KeyRound className="h-6 w-6 text-primary" />
+                    <CardTitle>Firebase Configuration</CardTitle>
+                </div>
+                <CardDescription>
+                    Update your app's Firebase project configuration keys.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="apiKey">API Key</Label>
+                        <Input id="apiKey" value={config.apiKey} onChange={(e) => handleConfigChange('apiKey', e.target.value)} />
                     </div>
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="authDomain">Auth Domain</Label>
+                        <Input id="authDomain" value={config.authDomain} onChange={(e) => handleConfigChange('authDomain', e.target.value)} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="projectId">Project ID</Label>
+                        <Input id="projectId" value={config.projectId} onChange={(e) => handleConfigChange('projectId', e.target.value)} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="storageBucket">Storage Bucket</Label>
+                        <Input id="storageBucket" value={config.storageBucket} onChange={(e) => handleConfigChange('storageBucket', e.target.value)} />
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+
         </div>
     </form>
   );
