@@ -8,6 +8,9 @@ import { useLocalStorage } from '@/hooks/use-local-storage';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function RootLayout({
   children,
@@ -15,22 +18,35 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const [isMounted, setIsMounted] = useState(false);
-  const [isGlassEffectEnabled] = useLocalStorage('glass-effect-enabled', false);
-  const [isNitroThemeEnabled] = useLocalStorage('nitro-theme-enabled', false);
+  const [theme, setTheme] = useLocalStorage<'default' | 'dark' | 'glass'>('theme', 'default');
+  const [backgroundUrl, setBackgroundUrl] = useState('');
   const pathname = usePathname();
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        if(user && db) {
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if(userDocSnap.exists()) {
+                const userData = userDocSnap.data();
+                if(userData.backgroundUrl) {
+                    setBackgroundUrl(userData.backgroundUrl);
+                }
+                if(userData.theme) {
+                    setTheme(userData.theme);
+                }
+            }
+        }
+    });
+
+    return () => unsubscribe();
+
+  }, [setTheme]);
   
   const isStorePath = pathname.startsWith('/store');
   const isAuthPath = pathname === '/login' || pathname === '/register';
-
-  const bodyClass = cn(
-    "antialiased flex min-h-screen flex-col bg-background",
-    isMounted && !isStorePath && !isAuthPath && isNitroThemeEnabled && "gradient-body",
-    isMounted && !isStorePath && !isAuthPath && !isNitroThemeEnabled && isGlassEffectEnabled && "theme-glass",
-  );
 
   if (!isMounted) {
     return (
@@ -47,13 +63,20 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></link>
       </head>
-      <body className={bodyClass}>
+      <body 
+        className={cn(
+          "antialiased flex min-h-screen flex-col bg-background"
+        )}
+        style={{
+            backgroundImage: theme === 'glass' && backgroundUrl ? `url(${backgroundUrl})` : 'none'
+        }}
+        data-theme={theme === 'glass' ? 'glass' : undefined}
+      >
         <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
             disableTransitionOnChange
-            forcedTheme={isNitroThemeEnabled ? 'gradient' : undefined}
         >
             <main className="flex-grow">{children}</main>
             <Toaster />

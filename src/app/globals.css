@@ -72,127 +72,12 @@
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
-  [data-theme="matrix"] {
-    --background: 120 6% 8%;
-    --foreground: 120 95% 75%;
-    --card: 120 6% 10%;
-    --card-foreground: 120 95% 75%;
-    --popover: 120 6% 8%;
-    --popover-foreground: 120 95% 75%;
-    --primary: 120 95% 65%;
-    --primary-foreground: 120 6% 8%;
-    --secondary: 120 6% 15%;
-    --secondary-foreground: 120 95% 85%;
-    --muted: 120 6% 15%;
-    --muted-foreground: 120 20% 60%;
-    --accent: 120 95% 65%;
-    --accent-foreground: 120 6% 8%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 120 10% 25%;
-    --input: 120 10% 25%;
-    --ring: 120 95% 65%;
-  }
-  [data-theme="neon"] {
-    --background: 258 53% 5%;
-    --foreground: 258 100% 95%;
-    --card: 258 53% 8%;
-    --card-foreground: 258 100% 95%;
-    --popover: 258 53% 5%;
-    --popover-foreground: 258 100% 95%;
-    --primary: 330 100% 71%;
-    --primary-foreground: 330 100% 10%;
-    --secondary: 258 53% 15%;
-    --secondary-foreground: 258 100% 95%;
-    --muted: 258 53% 15%;
-    --muted-foreground: 258 20% 70%;
-    --accent: 330 100% 71%;
-    --accent-foreground: 330 100% 10%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 258 53% 20%;
-    --input: 258 53% 20%;
-    --ring: 330 100% 71%;
-  }
-  [data-theme="blurple"] {
-    --background: 235 86% 25%; /* Slightly lighter than card */
-    --foreground: 235 86% 95%;
-    --card: 235 86% 19%;
-    --card-foreground: 235 86% 95%;
-    --popover: 235 86% 19%;
-    --popover-foreground: 235 86% 95%;
-    --primary: 235 86% 77%;
-    --primary-foreground: 235 86% 15%;
-    --secondary: 235 86% 32%;
-    --secondary-foreground: 235 86% 95%;
-    --muted: 235 86% 32%;
-    --muted-foreground: 235 86% 80%;
-    --accent: 235 86% 77%;
-    --accent-foreground: 235 86% 15%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 235 86% 32%;
-    --input: 235 86% 32%;
-    --ring: 235 86% 77%;
-  }
 
-  [data-theme="midnight"] {
-    --background: 240 10% 3.9%;
-    --foreground: 210 40% 98%;
-    --card: 240 5.9% 10%;
-    --card-foreground: 210 40% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 91% 60%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 217 91% 60%;
-  }
-
-  [data-theme="gradient"] {
-    --background: 240 10% 3.9%;
-    --foreground: 210 40% 98%;
-    --card: 240 5.9% 10%;
-    --card-foreground: 210 40% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 262.1 83.3% 57.8%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 215 20% 65.1%;
-    --accent: 262.1 83.3% 57.8%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 262.1 83.3% 57.8%;
-  }
-
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-   .theme-glass {
+  [data-theme="glass"] {
     --background: 224 71.4% 4.1%;
     --foreground: 0 0% 98%;
-    --card: 224 71.4% 10.1%;
+    /* Card is semi-transparent */
+    --card: 224 71.4% 10.1%; /* A bit lighter than background */
     --card-foreground: 0 0% 98%;
     --popover: 224 71.4% 4.1%;
     --popover-foreground: 0 0% 98%;
@@ -210,23 +95,23 @@
     --input: 215 27.9% 16.9%;
     --ring: 217.2 91.2% 59.8%;
   }
-   .theme-glass {
-    background-image: url('https://i.ibb.co/hK9qL9j/dave-hoefler-l-So-T-5-Nk-c-unsplash.jpg');
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
   }
-  .gradient-body {
-    background: linear-gradient(135deg, hsl(235, 86%, 19%), hsl(260, 80%, 30%), hsl(280, 70%, 40%));
-    background-attachment: fixed;
-  }
-  .theme-glass .glass-card {
-    background-color: hsla(var(--card), 0.5);
+
+  [data-theme="glass"] .glass-card {
+    background-color: hsla(var(--card), 0.5) !important;
     backdrop-filter: blur(12px) saturate(180%);
     -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid hsla(var(--border), 0.2);
-  }
-  [data-theme="gradient"] .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500;
+    border: 1px solid hsla(var(--border), 0.2) !important;
   }
 }

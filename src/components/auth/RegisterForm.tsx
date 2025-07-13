@@ -28,10 +28,10 @@ const usernameSchema = z.object({
 });
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
-    <title>Google</title>
-    <path fill="currentColor" d="M12.48 10.92v3.28h7.84c-.24 1.84-.85 3.18-1.73 4.1-1.02 1.02-2.9 2.26-4.97 2.26-3.98 0-6.92-3.25-6.92-7.3s2.94-7.3 6.92-7.3c2.25 0 3.86.88 4.79 1.8l2.6-2.58C18.94 1.23 16.2 0 12.48 0 5.88 0 .04 5.88.04 12.5s5.84 12.5 12.44 12.5c7.05 0 12.1-4.78 12.1-12.64 0-.87-.1-1.6-.25-2.28H12.48z" />
-  </svg>
+    <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
+      <title>Google</title>
+      <path fill="currentColor" d="M12.48 10.92v3.28h7.84c-.24 1.84-.85 3.18-1.73 4.1-1.02 1.02-2.9 2.26-4.97 2.26-3.98 0-6.92-3.25-6.92-7.3s2.94-7.3 6.92-7.3c2.25 0 3.86.88 4.79 1.8l2.6-2.58C18.94 1.23 16.2 0 12.48 0 5.88 0 .04 5.88.04 12.5s5.84 12.5 12.44 12.5c7.05 0 12.1-4.78 12.1-12.64 0-.87-.1-1.6-.25-2.28H12.48z" />
+    </svg>
 );
 
 export function RegisterForm({ redirectUrl }: { redirectUrl?: string | null }) {
@@ -65,6 +65,7 @@ export function RegisterForm({ redirectUrl }: { redirectUrl?: string | null }) {
         email: user.email,
         displayName: user.displayName,
         photoURL: user.photoURL,
+        theme: 'default',
     }, { merge: true }); // Use merge to avoid overwriting existing data if any
   }
   
