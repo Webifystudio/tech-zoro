@@ -47,6 +47,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface App {
     id: string;
@@ -67,6 +68,8 @@ export default function Home() {
 
   // Form state for the creation dialog
   const [newAppName, setNewAppName] = useState('');
+  const [newFirebaseConfig, setNewFirebaseConfig] = useState('');
+  const [newImgbbApiKey, setNewImgbbApiKey] = useState('');
   
   useEffect(() => {
     if (!isFirebaseConfigured || !auth) {
@@ -136,12 +139,14 @@ export default function Home() {
 
   const resetForm = () => {
     setNewAppName('');
+    setNewFirebaseConfig('');
+    setNewImgbbApiKey('');
   };
 
   const handleCreateApp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAppName.trim() || !user || !db) {
-      toast({ variant: 'destructive', title: 'Missing App Name', description: 'Please provide a name for your app.'});
+    if (!newAppName.trim() || !newFirebaseConfig.trim() || !newImgbbApiKey.trim() || !user || !db) {
+      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all the required fields.'});
       return;
     }
     
@@ -152,22 +157,26 @@ export default function Home() {
         ownerId: user.uid,
         ownerEmail: user.email,
         createdAt: serverTimestamp(),
+        setup: {
+          firebaseConfig: newFirebaseConfig,
+          imgbbApiKey: newImgbbApiKey,
+        }
       });
       
       resetForm();
       setIsDialogOpen(false);
       toast({
         title: "App Created!",
-        description: `Redirecting you to the setup page for "${newAppName.trim()}".`,
+        description: `Redirecting you to the dashboard for "${newAppName.trim()}".`,
       });
-      router.push(`/app/${newAppRef.id}/settings`);
+      router.push(`/app/${newAppRef.id}`);
 
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Failed to create app",
-        description: error.message || "An unexpected error occurred.",
-      });
+        toast({
+            variant: "destructive",
+            title: "Failed to create app",
+            description: error.message || "An unexpected error occurred.",
+        });
     } finally {
       setIsCreatingApp(false);
     }
@@ -262,34 +271,64 @@ export default function Home() {
                       <span className="sr-only">New App</span>
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
+                  <DialogContent className="sm:max-w-2xl">
                       <DialogHeader>
                           <DialogTitle>Create a new app</DialogTitle>
                           <DialogDescription>
-                              Enter a name for your new application to get started.
+                              Enter a name for your new application and provide the necessary keys to get started.
                           </DialogDescription>
                       </DialogHeader>
                       <form onSubmit={handleCreateApp}>
-                          <div className="grid gap-4 py-4">
-                              <div className="space-y-2">
-                                  <Label htmlFor="name">App Name</Label>
-                                  <Input
-                                      id="name"
-                                      placeholder="My Awesome App"
-                                      value={newAppName}
-                                      onChange={(e) => setNewAppName(e.target.value)}
-                                      autoFocus
-                                      required
-                                  />
+                          <ScrollArea className="max-h-[70vh] p-1">
+                              <div className="grid gap-4 py-4">
+                                  <div className="space-y-2">
+                                      <Label htmlFor="name">App Name</Label>
+                                      <Input
+                                          id="name"
+                                          placeholder="My Awesome App"
+                                          value={newAppName}
+                                          onChange={(e) => setNewAppName(e.target.value)}
+                                          autoFocus
+                                          required
+                                      />
+                                  </div>
+                                  <div className="space-y-2">
+                                      <Label htmlFor="firebaseConfig">Firebase Config</Label>
+                                       <Textarea
+                                          id="firebaseConfig"
+                                          placeholder="{ apiKey: '...', authDomain: '...', ... }"
+                                          value={newFirebaseConfig}
+                                          onChange={(e) => setNewFirebaseConfig(e.target.value)}
+                                          rows={6}
+                                          className="font-mono text-xs"
+                                          required
+                                      />
+                                      <p className="text-xs text-muted-foreground">
+                                        In your Firebase project, go to Project Settings &gt; General. Find your web app and copy the config object.
+                                      </p>
+                                  </div>
+                                  <div className="space-y-2">
+                                      <Label htmlFor="imgbbApiKey">ImgBB API Key</Label>
+                                      <Input
+                                          id="imgbbApiKey"
+                                          placeholder="Your ImgBB API Key"
+                                          value={newImgbbApiKey}
+                                          onChange={(e) => setNewImgbbApiKey(e.target.value)}
+                                          required
+                                      />
+                                      <p className="text-xs text-muted-foreground">
+                                        Login to <a href="https://imgbb.com/" target="_blank" rel="noopener noreferrer" className="underline">ImgBB</a>, navigate to the "API" page from the menu, and generate your API key.
+                                      </p>
+                                  </div>
                               </div>
-                          </div>
-                          <DialogFooter>
+                          </ScrollArea>
+                          <DialogFooter className="pt-4">
                             <DialogClose asChild>
                               <Button type="button" variant="outline">Cancel</Button>
                             </DialogClose>
                             <Button type="submit" disabled={isCreatingApp}>
                               {isCreatingApp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                              Create & Continue
+                              Create App
                             </Button>
                           </DialogFooter>
                       </form>
