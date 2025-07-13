@@ -216,7 +216,7 @@
     background-position: center;
     background-attachment: fixed;
   }
-  [data-theme="gradient"] body {
+  .gradient-body {
     background: linear-gradient(135deg, hsl(235, 86%, 19%), hsl(260, 80%, 30%), hsl(280, 70%, 40%));
     background-attachment: fixed;
   }

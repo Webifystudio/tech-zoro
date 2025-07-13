@@ -17,14 +17,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Upload, Camera } from 'lucide-react';
+import { Loader2, Upload, Camera, Zap } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { Separator } from '@/components/ui/separator';
+import { useTheme } from 'next-themes';
+
 
 export default function ProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { setTheme } = useTheme();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -41,6 +44,7 @@ export default function ProfilePage() {
   const [apps, setApps] = useState<{ id: string; name: string }[]>([]);
 
   const [isGlassEffectEnabled, setIsGlassEffectEnabled] = useLocalStorage('glass-effect-enabled', false);
+  const [isNitroThemeEnabled, setIsNitroThemeEnabled] = useLocalStorage('nitro-theme-enabled', false);
 
   useEffect(() => {
     if (!isFirebaseConfigured || !auth) {
@@ -73,6 +77,18 @@ export default function ProfilePage() {
       return () => unsubscribe();
     }
   }, [user]);
+  
+  const handleNitroToggle = (enabled: boolean) => {
+    setIsNitroThemeEnabled(enabled);
+    if (enabled) {
+      setIsGlassEffectEnabled(false);
+      setTheme('gradient');
+    } else {
+      // Revert to system theme preference when turned off
+      setTheme('system');
+    }
+  };
+
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
     if (e.target.files && e.target.files[0]) {
@@ -98,27 +114,30 @@ export default function ProfilePage() {
       let bannerUrl = bannerPreview; // Placeholder
 
       if (avatarFile) {
-        const formData = new FormData();
-        formData.append('image', avatarFile);
-        const result = await uploadImage(formData as any);
-        if (result.url) {
-          avatarUrl = result.url;
-        } else {
-          throw new Error(result.error || 'Avatar upload failed');
-        }
+        const base64Image = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(avatarFile);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = error => reject(error);
+        });
+        const result = await uploadImage(base64Image, 'profile-image'); // Using a generic ID here
+        if (result.url) avatarUrl = result.url;
+        else throw new Error('Avatar upload failed');
       }
       
       if (bannerFile) {
-        const formData = new FormData();
-        formData.append('image', bannerFile);
-        const result = await uploadImage(formData as any);
-        if (result.url) {
-          bannerUrl = result.url;
-          // In a real app, you would save this bannerUrl to your user profile in a database.
-          setBannerPreview(bannerUrl);
-        } else {
-          throw new Error(result.error || 'Banner upload failed');
+        const base64Image = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(bannerFile);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = error => reject(error);
+        });
+        const result = await uploadImage(base64Image, 'profile-banner');
+        if(result.url) {
+            bannerUrl = result.url;
+            setBannerPreview(bannerUrl);
         }
+        else throw new Error('Banner upload failed');
       }
 
       await updateProfile(user, {
@@ -126,7 +145,6 @@ export default function ProfilePage() {
         photoURL: avatarUrl,
       });
 
-      // Manually update user state to reflect changes immediately
       setUser(auth.currentUser);
       
       toast({
@@ -224,6 +242,24 @@ export default function ProfilePage() {
 
               <div className="space-y-4">
                  <h3 className="text-lg font-semibold">Theme Settings</h3>
+
+                 <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="nitro-theme" className="text-base flex items-center gap-2">
+                        <Zap className="text-yellow-400" />
+                        Enable Nitro Theme
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Experience a premium, gradient-based dark theme.
+                      </p>
+                    </div>
+                    <Switch
+                      id="nitro-theme"
+                      checked={isNitroThemeEnabled}
+                      onCheckedChange={handleNitroToggle}
+                    />
+                  </div>
+                 
                  <div className="flex items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
                       <Label htmlFor="glass-effect" className="text-base">
@@ -237,6 +273,7 @@ export default function ProfilePage() {
                       id="glass-effect"
                       checked={isGlassEffectEnabled}
                       onCheckedChange={setIsGlassEffectEnabled}
+                      disabled={isNitroThemeEnabled}
                     />
                   </div>
               </div>
@@ -272,5 +309,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
