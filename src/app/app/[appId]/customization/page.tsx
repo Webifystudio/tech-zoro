@@ -99,7 +99,7 @@ export default function CustomizationPage() {
   useEffect(() => {
     const message = { type: 'theme-change', theme: stagedSettings.theme };
     iframeRef.current?.contentWindow?.postMessage(message, '*');
-  }, [stagedSettings.theme]);
+  }, [stagedSettings.theme, iframeKey]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>, type: 'logo' | 'cover') => {
     if (e.target.files && e.target.files[0]) {
@@ -303,6 +303,7 @@ export default function CustomizationPage() {
                                 src={publicUrl}
                                 className="w-full h-full border-0"
                                 title="Store Preview"
+                                onLoad={() => iframeRef.current?.contentWindow?.postMessage({ type: 'theme-change', theme: stagedSettings.theme }, '*')}
                            />
                         ) : (
                             <div className="h-full w-full bg-muted flex items-center justify-center text-center p-4">

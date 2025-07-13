@@ -307,11 +307,6 @@ export default function Home() {
                           <DialogDescription>
                               Enter a name for your new application and provide the necessary keys to get started.
                           </DialogDescription>
-                          {tutorialLink && (
-                            <p className="text-sm text-muted-foreground pt-2">
-                                How to get API keys? <a href={tutorialLink} target="_blank" rel="noopener noreferrer" className="text-primary underline">Click here and watch the tutorial</a>.
-                            </p>
-                            )}
                       </DialogHeader>
                       <form onSubmit={handleCreateApp}>
                           <ScrollArea className="max-h-[70vh] p-1">
@@ -319,6 +314,11 @@ export default function Home() {
                                   <div className="space-y-2">
                                       <Label htmlFor="name">App Name</Label>
                                       <Input id="name" placeholder="My Awesome App" value={newAppName} onChange={(e) => setNewAppName(e.target.value)} autoFocus required />
+                                        {tutorialLink && (
+                                            <p className="text-xs text-muted-foreground pt-1">
+                                                How to get API keys? <a href={tutorialLink} target="_blank" rel="noopener noreferrer" className="text-primary underline">Click here and watch the tutorial</a>.
+                                            </p>
+                                        )}
                                   </div>
                                   <div className="space-y-2">
                                     <Label>Firebase Configuration</Label>
