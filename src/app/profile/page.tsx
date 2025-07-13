@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, updateProfile, type User } from 'firebase/auth';
 import Image from 'next/image';
 import Link from 'next/link';
-import { collection, query, where, onSnapshot, orderBy, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, doc, getDoc, setDoc } from 'firebase/firestore';
 
 import { auth, isFirebaseConfigured, db } from '@/lib/firebase';
 import { uploadImageForProfile } from '@/lib/imgbb';
@@ -146,7 +146,7 @@ export default function ProfilePage() {
       });
       
       const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, { 
+      await setDoc(userDocRef, { 
         displayName,
         photoURL: avatarUrl,
         bannerUrl: newBannerUrl,
