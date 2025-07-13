@@ -35,28 +35,19 @@ export default function AppDashboardPage() {
       pendingOrders: query(collection(db, 'apps', appId, 'orders'), where('status', '==', 'pending')),
       categories: collection(db, 'apps', appId, 'categories'),
     };
-
-    let loadedCount = 0;
-    const totalListeners = Object.keys(collections).length;
     
-    const createListener = (q: any, statKey: keyof typeof stats) => {
-        return onSnapshot(q, snapshot => {
-            setStats(prev => ({ ...prev, [statKey]: snapshot.size }));
-            loadedCount++;
-            if (loadedCount === totalListeners) {
-                setIsLoading(false);
-            }
-        });
-    }
-
-    const unsubscribers = [
-      createListener(collections.products, 'totalProducts'),
-      createListener(collections.orders, 'totalOrders'),
-      createListener(collections.pendingOrders, 'pendingInquiries'),
-      createListener(collections.categories, 'totalCategories'),
+    const unsubs = [
+        onSnapshot(collections.products, snapshot => setStats(prev => ({ ...prev, totalProducts: snapshot.size }))),
+        onSnapshot(collections.orders, snapshot => setStats(prev => ({ ...prev, totalOrders: snapshot.size }))),
+        onSnapshot(collections.pendingOrders, snapshot => setStats(prev => ({ ...prev, pendingInquiries: snapshot.size }))),
+        onSnapshot(collections.categories, snapshot => {
+            setStats(prev => ({ ...prev, totalCategories: snapshot.size }));
+            setIsLoading(false); // Set loading to false on the last listener
+        })
     ];
-
-    return () => unsubscribers.forEach(unsub => unsub());
+    
+    return () => unsubs.forEach(unsub => unsub());
+    
   }, [appId]);
 
   const cardStats = [
