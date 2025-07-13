@@ -172,11 +172,11 @@ export default function Home() {
       router.push(`/app/${newAppRef.id}`);
 
     } catch (error: any) {
-        toast({
+      toast({
             variant: "destructive",
             title: "Failed to create app",
             description: error.message || "An unexpected error occurred.",
-        });
+      });
     } finally {
       setIsCreatingApp(false);
     }
@@ -420,3 +420,5 @@ export default function Home() {
 
   return null;
 }
+
+    
