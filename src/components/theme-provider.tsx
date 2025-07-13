@@ -6,5 +6,5 @@ import { ThemeProvider as NextThemesProvider } from "next-themes"
 import type { ThemeProviderProps } from "next-themes/dist/types"
 
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
-  return <NextThemesProvider {...props} themes={['light', 'dark', 'system', 'gradient']}>{children}</NextThemesProvider>
+  return <NextThemesProvider {...props} themes={['light', 'dark', 'system', 'gradient', 'glass']}>{children}</NextThemesProvider>
 }

@@ -22,6 +22,7 @@ import { Switch } from '@/components/ui/switch';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { useTheme } from 'next-themes';
 
 
 export default function ProfilePage() {
@@ -46,7 +47,7 @@ export default function ProfilePage() {
   
   const [apps, setApps] = useState<{ id: string; name: string }[]>([]);
 
-  const [theme, setTheme] = useLocalStorage<'default' | 'dark' | 'glass' | 'gradient'>('theme', 'default');
+  const { theme, setTheme } = useTheme();
   const [nitroEnabled, setNitroEnabled] = useLocalStorage<boolean>('nitro_theme_enabled', false);
   const isGlassEnabled = theme === 'glass';
 
@@ -70,10 +71,7 @@ export default function ProfilePage() {
                 const userData = userDocSnap.data();
                 setBannerPreview(userData.bannerUrl || 'https://placehold.co/1200x300.png');
                 setBackgroundPreview(userData.backgroundUrl);
-                if (userData.theme) {
-                    setTheme(userData.theme);
-                }
-                 if(userData.nitroEnabled) {
+                if (userData.nitroEnabled) {
                     setNitroEnabled(userData.nitroEnabled);
                 }
             } else {
@@ -85,7 +83,7 @@ export default function ProfilePage() {
     });
 
     return () => unsubscribe();
-  }, [router, setTheme, setNitroEnabled]);
+  }, [router, setNitroEnabled]);
 
   useEffect(() => {
     if (user && db) {
