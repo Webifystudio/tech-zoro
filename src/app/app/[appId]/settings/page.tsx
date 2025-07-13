@@ -161,6 +161,7 @@ export default function AppSettingsPage() {
             reader.onload = () => resolve(reader.result as string);
             reader.onerror = error => reject(error);
           });
+          // This is the corrected part: passing appId to uploadImage
           const result = await uploadImage(base64Image, appId);
           if (result.url) return result.url;
           throw new Error(`Image upload failed: ${result.error}`);
