@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, LogIn } from 'lucide-react';
 import Link from 'next/link';
 
 interface Invitation {
@@ -22,6 +22,12 @@ interface Invitation {
   status: 'pending' | 'accepted' | 'declined';
 }
 
+interface AppData {
+    customization?: {
+        logoUrl?: string;
+    }
+}
+
 export default function InvitePage() {
   const params = useParams();
   const router = useRouter();
@@ -30,6 +36,7 @@ export default function InvitePage() {
 
   const [user, setUser] = useState<User | null>(null);
   const [invitation, setInvitation] = useState<Invitation | null>(null);
+  const [appData, setAppData] = useState<AppData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,9 +58,19 @@ export default function InvitePage() {
 
       if (!inviteSnap.exists()) {
         setError("This invitation is invalid or has expired.");
-      } else {
-        setInvitation(inviteSnap.data() as Invitation);
+        setIsLoading(false);
+        return;
       }
+      
+      const invData = inviteSnap.data() as Invitation;
+      setInvitation(invData);
+
+      const appRef = doc(db, 'apps', invData.appId);
+      const appSnap = await getDoc(appRef);
+      if (appSnap.exists()) {
+        setAppData(appSnap.data() as AppData);
+      }
+
       setIsLoading(false);
     };
 
@@ -62,7 +79,7 @@ export default function InvitePage() {
 
   useEffect(() => {
     if (user && invitation && user.email !== invitation.recipientEmail) {
-        setError("This invitation is for a different email address. Please log in with the correct account.");
+        setError(`This invite is for ${invitation.recipientEmail}. Please log in with the correct account.`);
     } else if (user && invitation && invitation.status !== 'pending') {
         setError("This invitation has already been responded to.");
     } else {
@@ -114,6 +131,10 @@ export default function InvitePage() {
         setIsProcessing(false);
     }
   };
+  
+  const handleLater = () => {
+      router.push('/');
+  }
 
   if (isLoading) {
     return (
@@ -123,28 +144,41 @@ export default function InvitePage() {
     );
   }
 
+  if (!invitation) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+             <Card className="w-full max-w-md text-center">
+                <CardHeader>
+                    <XCircle className="mx-auto h-12 w-12 text-destructive" />
+                    <CardTitle className="mt-4">Invitation Invalid</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground">The invitation link is either invalid or has expired. Please ask for a new invitation.</p>
+                </CardContent>
+                <CardFooter>
+                    <Button asChild className="w-full">
+                        <Link href="/">Go to Home</Link>
+                    </Button>
+                </CardFooter>
+            </Card>
+        </div>
+      )
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-        <Card className="w-full max-w-md animate-slide-in-from-bottom [animation-fill-mode:backwards]">
-            <CardHeader className="text-center">
-                <CardTitle className="text-2xl">You're Invited!</CardTitle>
-                <CardDescription>
-                    {invitation ? `${invitation.inviterName} has invited you to collaborate.` : 'Loading invitation...'}
-                </CardDescription>
+        <Card className="w-full max-w-sm text-center animate-slide-in-from-bottom [animation-fill-mode:backwards]">
+            <CardHeader>
+                <Avatar className="mx-auto h-20 w-20 mb-4 border-2 border-primary/20">
+                    <AvatarImage src={appData?.customization?.logoUrl} alt={invitation.appName} />
+                    <AvatarFallback className="text-3xl bg-muted">{invitation.appName.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <p className="text-muted-foreground">
+                    <span className="font-bold text-foreground">{invitation.inviterName}</span> has invited you to collaborate on
+                </p>
+                <CardTitle className="text-3xl">{invitation.appName}</CardTitle>
             </CardHeader>
-             {invitation && (
-                <CardContent className="text-center space-y-6">
-                   <div className="space-y-2">
-                     <p className="text-sm text-muted-foreground">App Name</p>
-                     <p className="text-xl font-semibold">{invitation.appName}</p>
-                   </div>
-                    <div className="space-y-2">
-                     <p className="text-sm text-muted-foreground">Your Role</p>
-                     <p className="text-xl font-semibold">{invitation.role}</p>
-                   </div>
-                </CardContent>
-            )}
-            <CardFooter className="flex flex-col gap-4">
+            <CardContent>
                 {user ? (
                      error ? (
                         <div className="text-center text-destructive bg-destructive/10 p-4 rounded-md">
@@ -152,19 +186,22 @@ export default function InvitePage() {
                             <p className="font-semibold">{error}</p>
                         </div>
                     ) : (
-                        <Button className="w-full" onClick={handleAcceptInvite} disabled={isProcessing}>
+                        <Button className="w-full" size="lg" onClick={handleAcceptInvite} disabled={isProcessing}>
                             {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
                             Accept Invitation
                         </Button>
                     )
                 ) : (
-                    <div className="text-center w-full">
-                        <p className="text-muted-foreground mb-4">You need to be logged in to accept this invitation.</p>
-                        <Button asChild className="w-full">
-                           <Link href={`/login?redirect=/invite/${inviteId}`}>Login or Sign Up</Link>
+                    <div className="text-center w-full space-y-2">
+                        <p className="text-muted-foreground">You need to be logged in to accept.</p>
+                        <Button asChild className="w-full" size="lg">
+                           <Link href={`/login?redirect=/invite/${inviteId}`}><LogIn className="mr-2 h-4 w-4" />Login or Sign Up</Link>
                         </Button>
                     </div>
                 )}
+            </CardContent>
+            <CardFooter>
+                <Button variant="link" className="w-full text-muted-foreground" onClick={handleLater}>I'll do this later</Button>
             </CardFooter>
         </Card>
     </div>
