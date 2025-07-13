@@ -70,7 +70,6 @@ export default function Home() {
   // Form state for the creation dialog
   const [newAppName, setNewAppName] = useState('');
   const [newFirebaseConfig, setNewFirebaseConfig] = useState('');
-  const [newImgbbApiKey, setNewImgbbApiKey] = useState('');
   
   useEffect(() => {
     if (!isFirebaseConfigured || !auth) {
@@ -154,12 +153,11 @@ export default function Home() {
   const resetForm = () => {
     setNewAppName('');
     setNewFirebaseConfig('');
-    setNewImgbbApiKey('');
   };
 
   const handleCreateApp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAppName.trim() || !newFirebaseConfig.trim() || !newImgbbApiKey.trim() || !user || !db) {
+    if (!newAppName.trim() || !newFirebaseConfig.trim() || !user || !db) {
       toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all the required fields.'});
       return;
     }
@@ -173,7 +171,6 @@ export default function Home() {
         createdAt: serverTimestamp(),
         setup: {
           firebaseConfig: newFirebaseConfig,
-          imgbbApiKey: newImgbbApiKey,
         }
       });
       
@@ -328,16 +325,6 @@ export default function Home() {
                                           onChange={(e) => setNewFirebaseConfig(e.target.value)}
                                           rows={6}
                                           className="font-mono text-xs"
-                                          required
-                                      />
-                                  </div>
-                                  <div className="space-y-2">
-                                      <Label htmlFor="imgbbApiKey">ImgBB API Key</Label>
-                                      <Input
-                                          id="imgbbApiKey"
-                                          placeholder="Your ImgBB API Key"
-                                          value={newImgbbApiKey}
-                                          onChange={(e) => setNewImgbbApiKey(e.target.value)}
                                           required
                                       />
                                   </div>

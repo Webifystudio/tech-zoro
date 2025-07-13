@@ -26,7 +26,6 @@ interface AppSettings {
     coverUrl?: string;
     setup: {
         firebaseConfig: string;
-        imgbbApiKey: string;
     }
 }
 
@@ -47,7 +46,6 @@ export default function AppSettingsPage() {
     coverUrl: '',
     setup: {
         firebaseConfig: '',
-        imgbbApiKey: ''
     }
   });
 
@@ -98,7 +96,7 @@ export default function AppSettingsPage() {
               description: appData.description || '',
               logoUrl: appData.logoUrl,
               coverUrl: appData.coverUrl,
-              setup: appData.setup || { firebaseConfig: '', imgbbApiKey: '' }
+              setup: appData.setup || { firebaseConfig: '' }
           });
           setLogoPreview(appData.logoUrl);
           setCoverPreview(appData.coverUrl);
@@ -121,11 +119,11 @@ export default function AppSettingsPage() {
     setSettings(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSetupChange = (field: 'firebaseConfig' | 'imgbbApiKey', value: string) => {
+  const handleSetupChange = (field: 'firebaseConfig', value: string) => {
     setSettings(prev => ({
         ...prev,
         setup: {
-            ...(prev.setup || { firebaseConfig: '', imgbbApiKey: '' }),
+            ...(prev.setup || { firebaseConfig: '' }),
             [field]: value
         }
     }));
@@ -166,7 +164,7 @@ export default function AppSettingsPage() {
 
       if (logoFile) {
         const base64Image = await fileToBase64(logoFile);
-        const result = await uploadImage(base64Image, appId);
+        const result = await uploadImage(base64Image);
         if (result.url) {
             logoUrl = result.url;
         } else {
@@ -176,7 +174,7 @@ export default function AppSettingsPage() {
 
       if (coverFile) {
         const base64Image = await fileToBase64(coverFile);
-        const result = await uploadImage(base64Image, appId);
+        const result = await uploadImage(base64Image);
         if (result.url) {
             coverUrl = result.url;
         } else {
@@ -346,23 +344,6 @@ export default function AppSettingsPage() {
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center gap-3">
-                            <ImageIcon className="h-6 w-6 text-primary" />
-                            <CardTitle>ImgBB API Key</CardTitle>
-                        </div>
-                        <CardDescription>
-                            Update your ImgBB API key for image hosting.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-2">
-                            <Label htmlFor="imgbbApiKey">API Key</Label>
-                            <Input id="imgbbApiKey" placeholder="Your ImgBB API Key" value={settings.setup?.imgbbApiKey} onChange={(e) => handleSetupChange('imgbbApiKey', e.target.value)} />
-                        </div>
-                    </CardContent>
-                </Card>
             </div>
             <div className="lg:col-span-1 space-y-8">
                 <Card>
