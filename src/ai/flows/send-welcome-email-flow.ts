@@ -31,6 +31,12 @@ const sendWelcomeEmailFlow = ai.defineFlow(
     outputSchema: z.void(),
   },
   async ({ email, username }) => {
+    
+    // Ensure environment variables are set. This is crucial for Nodemailer to work.
+    if (!process.env.EMAIL_SERVER_USER || !process.env.EMAIL_SERVER_PASSWORD) {
+        throw new Error("Email server credentials are not configured in environment variables.");
+    }
+    
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
