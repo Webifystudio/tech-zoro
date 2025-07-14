@@ -19,7 +19,6 @@ const coreMenuItems = [
 ];
 
 const managementMenuItems = [
-    { href: `/app/{appId}/customization`, label: 'Customization', icon: Palette },
     { href: `/app/{appId}/pages`, label: 'Pages', icon: FileText },
     { href: `/app/{appId}/marketing`, label: 'Marketing', icon: Megaphone },
     { href: `/app/{appId}/integrations`, label: 'Integrations', icon: Share2 },
