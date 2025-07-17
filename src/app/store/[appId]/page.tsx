@@ -103,8 +103,8 @@ export default function StorefrontPage() {
         aria-disabled={isOutOfStock}
       >
         <div className="bg-background rounded-lg border overflow-hidden flex flex-col group transition-all hover:shadow-xl hover:-translate-y-1 h-full">
-          <div className="relative h-48 w-full overflow-hidden">
-            <Image src={primaryImage} layout="fill" objectFit="cover" alt={product.name} className="group-hover:scale-105 transition-transform duration-300"/>
+          <div className="relative w-full overflow-hidden aspect-square">
+            <Image src={primaryImage} alt={product.name} width={400} height={400} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
               {isOutOfStock && (
                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                     <Badge variant="destructive" className="text-base px-4 py-2">Out of Stock</Badge>
