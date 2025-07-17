@@ -20,7 +20,8 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  imageUrl: string;
+  imageUrl?: string; // For older products
+  imageUrls?: string[]; // For newer products
   quantity: number | null;
   platform: 'instagram' | 'whatsapp' | 'affiliate';
   categories?: string[];
@@ -92,6 +93,8 @@ export default function StorefrontPage() {
 
   const ProductCard = ({ product }: { product: Product }) => {
     const isOutOfStock = product.quantity !== null && product.quantity <= 0;
+    const primaryImage = (product.imageUrls && product.imageUrls[0]) || product.imageUrl || "https://placehold.co/400x400.png";
+
     return (
       <Link 
         href={`/store/${appId}/product/${product.id}`} 
@@ -101,7 +104,7 @@ export default function StorefrontPage() {
       >
         <div className="bg-background rounded-lg border overflow-hidden flex flex-col group transition-all hover:shadow-xl hover:-translate-y-1 h-full">
           <div className="relative h-56 w-full overflow-hidden">
-            <Image src={product.imageUrl} layout="fill" objectFit="cover" alt={product.name} className="group-hover:scale-105 transition-transform duration-300"/>
+            <Image src={primaryImage} layout="fill" objectFit="cover" alt={product.name} className="group-hover:scale-105 transition-transform duration-300"/>
               {isOutOfStock && (
                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                     <Badge variant="destructive" className="text-base px-4 py-2">Out of Stock</Badge>
@@ -190,17 +193,11 @@ export default function StorefrontPage() {
             </Button>
           </div>
           {products.length > 0 ? (
-            <Carousel opts={{ align: "start" }} className="w-full">
-                <CarouselContent className="-ml-4">
-                    {products.slice(0, 10).map(product => (
-                        <CarouselItem key={product.id} className="pl-4 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
-                           <ProductCard product={product} />
-                        </CarouselItem>
-                    ))}
-                </CarouselContent>
-                <CarouselPrevious className="hidden md:flex" />
-                <CarouselNext className="hidden md:flex" />
-            </Carousel>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {products.slice(0, 8).map(product => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
           ) : (
             <p className="text-muted-foreground text-center py-8">No new products yet.</p>
           )}
@@ -217,17 +214,11 @@ export default function StorefrontPage() {
                             <Link href={`/store/${appId}/category/${category.id}`}>View All <ArrowRight className="ml-2 h-4 w-4" /></Link>
                         </Button>
                     </div>
-                     <Carousel opts={{ align: "start" }} className="w-full">
-                        <CarouselContent className="-ml-4">
-                            {categoryProducts.map(product => (
-                                <CarouselItem key={product.id} className="pl-4 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
-                                   <ProductCard product={product} />
-                                </CarouselItem>
-                            ))}
-                        </CarouselContent>
-                        <CarouselPrevious className="hidden md:flex" />
-                        <CarouselNext className="hidden md:flex" />
-                    </Carousel>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        {categoryProducts.slice(0, 4).map(product => (
+                          <ProductCard key={product.id} product={product} />
+                        ))}
+                     </div>
                 </section>
             );
         })}

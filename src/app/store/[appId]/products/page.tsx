@@ -19,7 +19,8 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  imageUrl: string;
+  imageUrl?: string;
+  imageUrls?: string[];
   quantity: number | null;
   platform: 'instagram' | 'whatsapp' | 'affiliate';
 }
@@ -98,6 +99,8 @@ export default function AllProductsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {productsToShow.map(product => {
               const isOutOfStock = product.quantity !== null && product.quantity <= 0;
+              const primaryImage = (product.imageUrls && product.imageUrls[0]) || product.imageUrl || "https://placehold.co/400x400.png";
+
               return (
                 <Link 
                   key={product.id} 
@@ -108,7 +111,7 @@ export default function AllProductsPage() {
                 >
                   <div className="bg-background rounded-lg border overflow-hidden flex flex-col group transition-all hover:shadow-xl hover:-translate-y-1 h-full">
                     <div className="relative h-56 w-full overflow-hidden">
-                      <Image src={product.imageUrl} layout="fill" objectFit="cover" alt={product.name} className="group-hover:scale-105 transition-transform duration-300"/>
+                      <Image src={primaryImage} layout="fill" objectFit="cover" alt={product.name} className="group-hover:scale-105 transition-transform duration-300"/>
                         {isOutOfStock && (
                           <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                               <Badge variant="destructive" className="text-base px-4 py-2">Out of Stock</Badge>
