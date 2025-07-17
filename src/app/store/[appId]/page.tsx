@@ -155,7 +155,7 @@ export default function StorefrontPage() {
           {coverImageUrl && (
               <Image src={coverImageUrl} layout="fill" objectFit="cover" alt="Store banner" className="opacity-30" data-ai-hint="website banner" />
           )}
-          <div className="relative z-10 max-w-2xl">
+          <div className="relative z-10 max-w-2xl text-center md:text-left">
               <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-foreground">{appData?.name || 'Welcome to Our Store'}</h1>
               <p className="mt-4 text-lg text-muted-foreground">{appData?.description || 'Find the best products here.'}</p>
           </div>
