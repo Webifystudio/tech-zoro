@@ -20,8 +20,8 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  imageUrl?: string; // For older products
-  imageUrls?: string[]; // For newer products
+  imageUrl?: string;
+  imageUrls?: string[];
   quantity: number | null;
   platform: 'instagram' | 'whatsapp' | 'affiliate';
   categories?: string[];
