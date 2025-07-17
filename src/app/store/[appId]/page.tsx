@@ -103,7 +103,7 @@ export default function StorefrontPage() {
         aria-disabled={isOutOfStock}
       >
         <div className="bg-background rounded-lg border overflow-hidden flex flex-col group transition-all hover:shadow-xl hover:-translate-y-1 h-full">
-          <div className="relative h-56 w-full overflow-hidden">
+          <div className="relative h-48 w-full overflow-hidden">
             <Image src={primaryImage} layout="fill" objectFit="cover" alt={product.name} className="group-hover:scale-105 transition-transform duration-300"/>
               {isOutOfStock && (
                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
@@ -112,10 +112,10 @@ export default function StorefrontPage() {
             )}
           </div>
           <div className="p-4 flex-grow flex flex-col">
-            <h3 className="font-semibold text-lg truncate">{product.name}</h3>
+            <h3 className="font-semibold text-md truncate">{product.name}</h3>
             <p className="text-muted-foreground text-sm mt-1 flex-grow truncate">{product.description}</p>
             <div className="flex items-center justify-between mt-4">
-              <p className="font-bold text-xl text-primary">₹{product.price.toFixed(2)}</p>
+              <p className="font-bold text-lg text-primary">₹{product.price.toFixed(2)}</p>
               <Badge variant="outline" className="capitalize">
                   {product.platform === 'whatsapp' ? <MessageCircle className="h-4 w-4 mr-1.5"/> : product.platform === 'instagram' ? <Instagram className="h-4 w-4 mr-1.5"/> : <LinkIcon className="h-4 w-4 mr-1.5"/>}
                   {product.platform}
