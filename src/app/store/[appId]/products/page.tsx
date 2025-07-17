@@ -120,7 +120,7 @@ export default function AllProductsPage() {
                     </div>
                     <div className="p-4 flex-grow flex flex-col">
                       <h3 className="font-semibold text-lg truncate">{product.name}</h3>
-                      <p className="text-muted-foreground text-sm mt-1 flex-grow">{product.description}</p>
+                      <p className="text-muted-foreground text-sm mt-1 flex-grow truncate">{product.description}</p>
                       <div className="flex items-center justify-between mt-4">
                         <p className="font-bold text-xl text-primary">₹{product.price.toFixed(2)}</p>
                         <Badge variant="outline" className="capitalize">

@@ -113,7 +113,7 @@ export default function StorefrontPage() {
           </div>
           <div className="p-4 flex-grow flex flex-col">
             <h3 className="font-semibold text-lg truncate">{product.name}</h3>
-            <p className="text-muted-foreground text-sm mt-1 flex-grow">{product.description}</p>
+            <p className="text-muted-foreground text-sm mt-1 flex-grow truncate">{product.description}</p>
             <div className="flex items-center justify-between mt-4">
               <p className="font-bold text-xl text-primary">₹{product.price.toFixed(2)}</p>
               <Badge variant="outline" className="capitalize">
@@ -155,7 +155,7 @@ export default function StorefrontPage() {
           {coverImageUrl && (
               <Image src={coverImageUrl} layout="fill" objectFit="cover" alt="Store banner" className="opacity-30" data-ai-hint="website banner" />
           )}
-          <div className="relative z-10 max-w-2xl text-center">
+          <div className="relative z-10 max-w-2xl mx-auto">
               <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground text-center md:text-left">{appData?.name || 'Welcome to Our Store'}</h1>
               <p className="mt-4 text-base md:text-lg text-muted-foreground text-center md:text-left">{appData?.description || 'Find the best products here.'}</p>
           </div>
