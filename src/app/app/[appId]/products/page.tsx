@@ -357,7 +357,13 @@ export default function ProductsPage() {
           {products.map((product) => (
             <Card key={product.id} className="overflow-hidden group">
                 <CardContent className="p-0 relative">
-                    <Image src={product.imageUrls[0]} alt={product.name} width={400} height={400} className="object-cover w-full h-48 group-hover:scale-105 transition-transform duration-300" />
+                    <Image 
+                        src={(product.imageUrls && product.imageUrls.length > 0) ? product.imageUrls[0] : "https://placehold.co/400x400.png"}
+                        alt={product.name} 
+                        width={400} 
+                        height={400} 
+                        className="object-cover w-full h-48 group-hover:scale-105 transition-transform duration-300" 
+                    />
                     <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteProduct(product.id)}>
                         <Trash2 className="h-4 w-4" />
                     </Button>
