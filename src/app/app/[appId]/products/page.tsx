@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, PlusCircle, Trash2, Upload, Instagram, MessageCircle, ShoppingBag, Link as LinkIcon, HelpCircle } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Upload, Instagram, MessageCircle, ShoppingBag, Link as LinkIcon, HelpCircle, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -30,7 +30,7 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  imageUrl: string;
+  imageUrls: string[]; // Changed from imageUrl
   quantity: number | null;
   platform: 'instagram' | 'whatsapp' | 'affiliate';
   instagramPostUrl?: string;
@@ -62,6 +62,7 @@ export default function ProductsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   
+  // Form state for the creation dialog
   const [productName, setProductName] = useState('');
   const [productDesc, setProductDesc] = useState('');
   const [productPrice, setProductPrice] = useState('');
@@ -70,8 +71,8 @@ export default function ProductsPage() {
   const [productCategories, setProductCategories] = useState<string[]>([]);
   const [instagramPostUrl, setInstagramPostUrl] = useState('');
   const [affiliateUrl, setAffiliateUrl] = useState('');
-  const [productImageFile, setProductImageFile] = useState<File | null>(null);
-  const [productImagePreview, setProductImagePreview] = useState<string | null>(null);
+  const [productImageFiles, setProductImageFiles] = useState<File[]>([]);
+  const [productImagePreviews, setProductImagePreviews] = useState<string[]>([]);
   const productImageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -109,12 +110,19 @@ export default function ProductsPage() {
   }, [user, appId, toast]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setProductImageFile(file);
-      setProductImagePreview(URL.createObjectURL(file));
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setProductImageFiles(prev => [...prev, ...files]);
+      
+      const newPreviews = files.map(file => URL.createObjectURL(file));
+      setProductImagePreviews(prev => [...prev, ...newPreviews]);
     }
   };
+
+  const removeImage = (index: number) => {
+      setProductImageFiles(prev => prev.filter((_, i) => i !== index));
+      setProductImagePreviews(prev => prev.filter((_, i) => i !== index));
+  }
   
   const resetForm = () => {
       setProductName('');
@@ -125,60 +133,57 @@ export default function ProductsPage() {
       setProductCategories([]);
       setInstagramPostUrl('');
       setAffiliateUrl('');
-      setProductImageFile(null);
-      setProductImagePreview(null);
+      setProductImageFiles([]);
+      setProductImagePreviews([]);
   }
 
   const handleCreateProduct = async (e: FormEvent) => {
     e.preventDefault();
-    if (!productName.trim() || !productPrice || !productImageFile || !productPlatform || !user || !db || (productPlatform === 'instagram' && !instagramPostUrl) || (productPlatform === 'affiliate' && !affiliateUrl)) {
-        toast({ variant: "destructive", title: "Missing fields", description: "Please fill out all required fields." });
+    if (!productName.trim() || !productPrice || productImageFiles.length === 0 || !productPlatform || !user || !db || (productPlatform === 'instagram' && !instagramPostUrl) || (productPlatform === 'affiliate' && !affiliateUrl)) {
+        toast({ variant: "destructive", title: "Missing fields", description: "Please fill out all required fields and upload at least one image." });
         return;
     }
 
     setIsCreating(true);
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(productImageFile);
-      reader.onloadend = async () => {
-          const base64Image = reader.result as string;
-          const result = await uploadImage(base64Image);
-
-          if (result.error) {
-            throw new Error(`Image upload failed: ${result.error}`);
-          }
-          if (!result.url) {
-            throw new Error('Image upload failed to return a URL.');
-          }
-
-          const newProduct: any = {
-            name: productName.trim(),
-            description: productDesc.trim(),
-            price: parseFloat(productPrice),
-            quantity: productQuantity.trim() === '' ? null : parseInt(productQuantity, 10),
-            platform: productPlatform,
-            categories: productCategories,
-            imageUrl: result.url,
-            createdAt: serverTimestamp(),
+      const uploadPromises = productImageFiles.map(file => {
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onloadend = async () => {
+              const base64Image = reader.result as string;
+              const result = await uploadImage(base64Image);
+              if (result.url) {
+                resolve(result.url);
+              } else {
+                reject(new Error(result.error || 'Image upload failed'));
+              }
           };
+          reader.onerror = (error) => reject(error);
+        });
+      });
 
-          if (productPlatform === 'instagram') {
-            newProduct.instagramPostUrl = instagramPostUrl;
-          }
-          if (productPlatform === 'affiliate') {
-            newProduct.affiliateUrl = affiliateUrl;
-          }
+      const imageUrls = await Promise.all(uploadPromises);
 
-          await addDoc(collection(db, "apps", appId, "products"), newProduct);
+      const newProduct: any = {
+        name: productName.trim(),
+        description: productDesc.trim(),
+        price: parseFloat(productPrice),
+        quantity: productQuantity.trim() === '' ? null : parseInt(productQuantity, 10),
+        platform: productPlatform,
+        categories: productCategories,
+        imageUrls: imageUrls,
+        createdAt: serverTimestamp(),
+      };
 
-          resetForm();
-          setIsDialogOpen(false);
-          toast({ title: "Product Added", description: `"${productName.trim()}" has been added.` });
-      }
-      reader.onerror = (error) => {
-        console.error("FileReader error:", error);
-        throw new Error("Could not read the image file.");
-      }
+      if (productPlatform === 'instagram') newProduct.instagramPostUrl = instagramPostUrl;
+      if (productPlatform === 'affiliate') newProduct.affiliateUrl = affiliateUrl;
+
+      await addDoc(collection(db, "apps", appId, "products"), newProduct);
+
+      resetForm();
+      setIsDialogOpen(false);
+      toast({ title: "Product Added", description: `"${productName.trim()}" has been added.` });
 
     } catch (error: any) {
       toast({ variant: "destructive", title: "Failed to add product", description: error.message });
@@ -222,13 +227,13 @@ export default function ProductsPage() {
               Add Product
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="sm:max-w-4xl">
             <DialogHeader>
               <DialogTitle>Add New Product</DialogTitle>
               <DialogDescription>Fill in the details for your new product.</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateProduct}>
-              <ScrollArea className="max-h-[70vh] p-1">
+              <ScrollArea className="max-h-[70vh]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
                 <div className="space-y-4">
                   <div className="space-y-2">
@@ -258,7 +263,7 @@ export default function ProductsPage() {
                            </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                           <div className="p-2 space-y-1">
+                           <div className="p-2 space-y-1 max-h-48 overflow-y-auto">
                               {categories.map(cat => (
                                  <div key={cat.id} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted cursor-pointer" onClick={() => toggleCategory(cat.id)}>
                                      <Checkbox id={`cat-${cat.id}`} checked={productCategories.includes(cat.id)} />
@@ -296,24 +301,36 @@ export default function ProductsPage() {
                    )}
                 </div>
                 <div className="space-y-2">
-                  <Label>Product Image</Label>
-                  <Card className="p-4 border-dashed">
-                    <input type="file" accept="image/*" ref={productImageInputRef} onChange={handleFileChange} className="hidden" required />
-                    {productImagePreview ? (
-                      <div className="relative group">
-                        <Image src={productImagePreview} alt="Product preview" width={400} height={400} className="w-full rounded-md object-cover aspect-square" />
-                        <div className="absolute inset-0 bg-black/50 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                           <Button type="button" variant="secondary" onClick={() => productImageInputRef.current?.click()}>
-                              <Upload className="mr-2 h-4 w-4"/> Change Image
-                           </Button>
-                        </div>
+                  <Label>Product Images</Label>
+                  <Card className="p-4 border-dashed h-full">
+                    <input type="file" accept="image/*" ref={productImageInputRef} onChange={handleFileChange} className="hidden" multiple />
+                    {productImagePreviews.length > 0 ? (
+                      <div className="grid grid-cols-3 gap-2">
+                          {productImagePreviews.map((preview, index) => (
+                              <div key={index} className="relative group aspect-square">
+                                  <Image src={preview} alt={`Preview ${index + 1}`} layout="fill" className="rounded-md object-cover" />
+                                  <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => removeImage(index)}>
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                              </div>
+                          ))}
+                          <div
+                            className="flex flex-col items-center justify-center space-y-2 text-center p-4 cursor-pointer aspect-square border-2 border-dashed rounded-md hover:bg-muted"
+                            onClick={() => productImageInputRef.current?.click()}
+                          >
+                             <Upload className="h-8 w-8 text-muted-foreground" />
+                             <p className="text-xs text-muted-foreground">Add more</p>
+                          </div>
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center justify-center space-y-2 text-center p-8 cursor-pointer aspect-square" onClick={() => productImageInputRef.current?.click()}>
+                      <div 
+                        className="flex flex-col items-center justify-center space-y-2 text-center p-8 cursor-pointer h-full"
+                        onClick={() => productImageInputRef.current?.click()}
+                      >
                         <div className="border-2 border-dashed border-muted-foreground/50 rounded-full p-4">
                           <Upload className="h-8 w-8 text-muted-foreground" />
                         </div>
-                        <p className="font-semibold">Click to upload image</p>
+                        <p className="font-semibold">Click to upload images</p>
                         <p className="text-sm text-muted-foreground">PNG, JPG, GIF up to 10MB</p>
                       </div>
                     )}
@@ -321,7 +338,7 @@ export default function ProductsPage() {
                 </div>
               </div>
               </ScrollArea>
-              <DialogFooter className="pt-4 pr-4">
+              <DialogFooter className="pt-4 pr-4 border-t mt-4">
                 <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
                 <Button type="submit" disabled={isCreating}>
                   {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -340,7 +357,7 @@ export default function ProductsPage() {
           {products.map((product) => (
             <Card key={product.id} className="overflow-hidden group">
                 <CardContent className="p-0 relative">
-                    <Image src={product.imageUrl} alt={product.name} width={400} height={400} className="object-cover w-full h-48 group-hover:scale-105 transition-transform duration-300" />
+                    <Image src={product.imageUrls[0]} alt={product.name} width={400} height={400} className="object-cover w-full h-48 group-hover:scale-105 transition-transform duration-300" />
                     <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteProduct(product.id)}>
                         <Trash2 className="h-4 w-4" />
                     </Button>

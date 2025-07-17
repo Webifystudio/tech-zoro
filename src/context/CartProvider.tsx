@@ -9,7 +9,7 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  imageUrl: string;
+  imageUrl: string; // Note: Cart will store only the primary image URL
   platform: 'instagram' | 'whatsapp' | 'affiliate';
 }
 

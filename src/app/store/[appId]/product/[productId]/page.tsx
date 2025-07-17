@@ -16,18 +16,19 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Star, Heart, ShoppingCart, Loader2, Trash2, Zap } from 'lucide-react';
+import { Star, Heart, ShoppingCart, Loader2, Trash2, Zap, Dot } from 'lucide-react';
 import { format, isPast } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCart } from '@/context/CartProvider';
+import { Carousel, CarouselContent, CarouselItem, CarouselApi } from '@/components/ui/carousel';
 
 interface Product {
   id: string;
   name: string;
   description: string;
   price: number;
-  imageUrl: string;
+  imageUrls: string[];
   quantity: number | null;
   platform: 'instagram' | 'whatsapp' | 'affiliate';
   instagramPostUrl?: string;
@@ -58,7 +59,6 @@ interface Coupon {
     uses?: number;
 }
 
-
 const StarRating = ({ rating, size = 'h-5 w-5' }: { rating: number; size?: string }) => (
   <div className="flex items-center">
     {[...Array(5)].map((_, i) => (
@@ -69,6 +69,48 @@ const StarRating = ({ rating, size = 'h-5 w-5' }: { rating: number; size?: strin
     ))}
   </div>
 );
+
+const ImageCarousel = ({ imageUrls, name }: { imageUrls: string[], name: string }) => {
+    const [api, setApi] = useState<CarouselApi>();
+    const [current, setCurrent] = useState(0);
+
+    useEffect(() => {
+        if (!api) return;
+        setCurrent(api.selectedScrollSnap());
+        api.on("select", () => {
+            setCurrent(api.selectedScrollSnap());
+        });
+    }, [api]);
+
+    return (
+        <div className="relative">
+            <Carousel setApi={setApi} className="w-full">
+                <CarouselContent>
+                    {imageUrls.map((url, index) => (
+                        <CarouselItem key={index}>
+                             <Card className="overflow-hidden shadow-lg relative aspect-square">
+                                <Image
+                                    src={url}
+                                    alt={`${name} image ${index + 1}`}
+                                    width={800}
+                                    height={800}
+                                    className="w-full h-full object-cover"
+                                />
+                            </Card>
+                        </CarouselItem>
+                    ))}
+                </CarouselContent>
+            </Carousel>
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
+                {imageUrls.map((_, index) => (
+                    <button key={index} onClick={() => api?.scrollTo(index)}>
+                        <Dot className={cn("h-6 w-6 transition-colors", current === index ? "text-primary" : "text-muted-foreground/30 hover:text-primary/50")} />
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -305,20 +347,24 @@ export default function ProductDetailPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="grid md:grid-cols-2 gap-8 lg:gap-16">
                 <div>
-                  <Card className="overflow-hidden shadow-lg relative">
+                  {product.imageUrls && product.imageUrls.length > 0 ? (
+                    <ImageCarousel imageUrls={product.imageUrls} name={product.name} />
+                  ) : (
+                    <Card className="overflow-hidden shadow-lg relative">
                       <Image
-                          src={product.imageUrl}
-                          alt={product.name}
+                          src="https://placehold.co/800x800.png"
+                          alt="Placeholder"
                           width={800}
                           height={800}
                           className="w-full object-cover aspect-square"
                       />
-                      {isOutOfStock && (
-                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                              <span className="text-white font-bold text-2xl border-2 border-white rounded-md p-4">Out of Stock</span>
-                          </div>
-                      )}
-                  </Card>
+                    </Card>
+                  )}
+                   {isOutOfStock && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
+                          <span className="text-white font-bold text-2xl border-2 border-white rounded-md p-4">Out of Stock</span>
+                      </div>
+                  )}
                 </div>
                 <div className="flex flex-col gap-4">
                 <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">{product.name}</h1>
@@ -379,7 +425,7 @@ export default function ProductDetailPage() {
                                 <Trash2 className="mr-2 h-5 w-5" /> Remove from Cart
                             </Button>
                         ) : (
-                            <Button size="lg" className="w-full" onClick={() => addToCart(product)} disabled={isOutOfStock}>
+                            <Button size="lg" className="w-full" onClick={() => addToCart({ ...product, imageUrl: product.imageUrls[0] })} disabled={isOutOfStock}>
                                 <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
                             </Button>
                         )}
@@ -477,5 +523,3 @@ export default function ProductDetailPage() {
     </div>
   );
 }
-
-    
