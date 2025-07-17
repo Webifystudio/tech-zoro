@@ -19,7 +19,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarFooter, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { StoreThemeToggle } from '@/components/StoreThemeToggle';
 
 interface AppData {
   name: string;
@@ -43,7 +44,8 @@ interface Product {
   id: string;
   name: string;
   price: number;
-  imageUrl: string;
+  imageUrls?: string[];
+  imageUrl?: string;
 }
 
 const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
@@ -237,6 +239,9 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
                     ))}
                 </SidebarMenu>
             </SidebarContent>
+            <SidebarFooter>
+                <StoreThemeToggle />
+            </SidebarFooter>
         </Sidebar>
     );
   }
@@ -296,13 +301,16 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
                             <div className="p-4 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
                         ) : suggestions.length > 0 ? (
                              <div className="flex flex-col">
-                              {suggestions.map(product => (
+                              {suggestions.map(product => {
+                                const primaryImage = (product.imageUrls && product.imageUrls[0]) || product.imageUrl || "https://placehold.co/40x40.png";
+                                return (
                                   <Link key={product.id} href={`/store/${appId}/product/${product.id}`} className="flex items-center gap-4 p-3 hover:bg-muted" onClick={() => setIsSuggestionPopoverOpen(false)}>
-                                      <Image src={product.imageUrl} alt={product.name} width={40} height={40} className="rounded-md object-cover" />
+                                      <Image src={primaryImage} alt={product.name} width={40} height={40} className="rounded-md object-cover" />
                                       <span className="font-medium">{product.name}</span>
                                       <span className="ml-auto text-sm text-primary">₹{product.price.toFixed(2)}</span>
                                   </Link>
-                              ))}
+                                )
+                              })}
                              </div>
                         ) : (
                             <div className="p-4 text-center text-sm text-muted-foreground">No suggestions found.</div>

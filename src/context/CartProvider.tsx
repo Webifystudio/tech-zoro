@@ -11,6 +11,7 @@ interface Product {
   price: number;
   imageUrl: string; // Note: Cart will store only the primary image URL
   platform: 'instagram' | 'whatsapp' | 'affiliate';
+  imageUrls?: string[];
 }
 
 interface CartContextType {
