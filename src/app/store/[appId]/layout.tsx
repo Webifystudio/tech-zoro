@@ -62,7 +62,7 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
   const cartTotal = cartItems.reduce((total, item) => total + item.price, 0);
 
   const [linkStatus, setLinkStatus] = useState<'offline' | 'online'>('offline');
-  const [theme, setTheme] = useState('default');
+  const [theme, setTheme] = useState('light');
   
   const statusKey = useMemo(() => `storefront_status_${appId}`, [appId]);
   const isPubliclyHosted = appData?.isPublic === true;
@@ -118,10 +118,9 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
       if (doc.exists()) {
         const data = doc.data() as AppData;
         setAppData(data);
-        if (data.customization?.theme) {
-          setTheme(data.customization.theme);
-          document.documentElement.dataset.theme = data.customization.theme;
-        }
+        const newTheme = data.customization?.theme || 'light';
+        setTheme(newTheme);
+        document.documentElement.dataset.theme = newTheme;
       } else {
         setAppData(null);
       }
@@ -258,7 +257,7 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
       <div className={cn("flex-1 flex flex-col", theme === 'glass' && 'glass-card m-0 md:m-4 md:rounded-xl')}>
         <header className="bg-background/80 backdrop-blur-sm shadow-sm sticky top-0 z-40 border-b">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-20 md:h-24 gap-4 md:gap-8">
+            <div className="flex items-center justify-between h-16 md:h-20 gap-4">
               
               <div className="flex items-center gap-2">
                 <SidebarTrigger className="md:hidden" />
@@ -280,17 +279,17 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
                 </div>
               </div>
 
-              <div className="flex-1 max-w-2xl">
+              <div className="flex-1 max-w-xl">
                 <Popover open={isSuggestionPopoverOpen} onOpenChange={setIsSuggestionPopoverOpen}>
                     <PopoverTrigger asChild>
                         <form className="relative" onSubmit={handleSearchSubmit}>
                           <Input 
                             placeholder="Search products..." 
-                            className="pl-5 pr-12 h-12 rounded-full w-full" 
+                            className="pl-5 pr-12 h-10 md:h-12 rounded-full w-full" 
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                           />
-                           <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full" type="submit">
+                           <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 md:h-10 md:w-10 rounded-full" type="submit">
                               <Search className="h-5 w-5 text-muted-foreground" />
                               <span className="sr-only">Search</span>
                           </Button>
@@ -393,7 +392,7 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
 export default function StoreLayout({
   children,
 }: {
-  children: React.Node;
+  children: React.ReactNode;
 }) {
   return (
     <CartProvider>

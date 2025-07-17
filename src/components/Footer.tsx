@@ -23,7 +23,7 @@ export function Footer() {
           <div className="space-y-2">
             <h3 className="font-semibold text-foreground">Support</h3>
             <ul className="space-y-1 text-sm">
-              <li><Link href="/docs#contact" className="hover:text-primary">Contact Us</Link></li>
+              <li><a href="mailto:techzoro.in@gmail.com" className="hover:text-primary">Contact Us</a></li>
               <li><Link href="/docs" className="hover:text-primary">Documentation</Link></li>
               <li><Link href="#" className="hover:text-primary">Shipping & Returns</Link></li>
             </ul>

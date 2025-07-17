@@ -151,13 +151,13 @@ export default function StorefrontPage() {
 
   return (
     <>
-      <section className="relative w-full h-80 md:h-96 bg-muted/40 flex items-center justify-center text-center p-4">
+      <section className="relative w-full h-64 md:h-80 bg-muted/40 flex items-center justify-center text-center p-4">
           {coverImageUrl && (
               <Image src={coverImageUrl} layout="fill" objectFit="cover" alt="Store banner" className="opacity-30" data-ai-hint="website banner" />
           )}
-          <div className="relative z-10 max-w-2xl text-center md:text-left">
-              <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-foreground">{appData?.name || 'Welcome to Our Store'}</h1>
-              <p className="mt-4 text-lg text-muted-foreground">{appData?.description || 'Find the best products here.'}</p>
+          <div className="relative z-10 max-w-2xl text-center">
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">{appData?.name || 'Welcome to Our Store'}</h1>
+              <p className="mt-4 text-base md:text-lg text-muted-foreground">{appData?.description || 'Find the best products here.'}</p>
           </div>
       </section>
 
@@ -193,19 +193,11 @@ export default function StorefrontPage() {
             </Button>
           </div>
           {products.length > 0 ? (
-            <Carousel opts={{align: "start"}} className="w-full">
-                <CarouselContent>
-                    {products.slice(0,8).map(product => (
-                       <CarouselItem key={product.id} className="basis-1/2 lg:basis-1/3 xl:basis-1/4">
-                            <div className="p-1 h-full">
-                                <ProductCard product={product} />
-                            </div>
-                       </CarouselItem>
-                    ))}
-                </CarouselContent>
-                <CarouselPrevious className="hidden md:flex" />
-                <CarouselNext className="hidden md:flex" />
-            </Carousel>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                {products.slice(0,8).map(product => (
+                   <ProductCard key={product.id} product={product} />
+                ))}
+            </div>
           ) : (
             <p className="text-muted-foreground text-center py-8">No new products yet.</p>
           )}
@@ -222,19 +214,11 @@ export default function StorefrontPage() {
                             <Link href={`/store/${appId}/category/${category.id}`}>View All <ArrowRight className="ml-2 h-4 w-4" /></Link>
                         </Button>
                     </div>
-                     <Carousel opts={{align: "start"}} className="w-full">
-                        <CarouselContent>
-                            {categoryProducts.slice(0, 8).map(product => (
-                               <CarouselItem key={product.id} className="basis-1/2 lg:basis-1/3 xl:basis-1/4">
-                                    <div className="p-1 h-full">
-                                        <ProductCard product={product} />
-                                    </div>
-                               </CarouselItem>
-                            ))}
-                        </CarouselContent>
-                        <CarouselPrevious className="hidden md:flex" />
-                        <CarouselNext className="hidden md:flex"/>
-                    </Carousel>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                        {categoryProducts.slice(0, 8).map(product => (
+                            <ProductCard key={product.id} product={product} />
+                        ))}
+                    </div>
                 </section>
             );
         })}
