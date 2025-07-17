@@ -2,11 +2,12 @@
 "use client";
 
 import { Sidebar, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarContent, SidebarSeparator } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, Globe, LayoutGrid, ShoppingBag, BarChart3, Megaphone, Palette, Wrench, Users2, ClipboardList, Share2, PackageX, Puzzle, Ticket, QrCode, FileText, Component, KeyRound } from 'lucide-react';
+import { LayoutDashboard, Settings, Globe, LayoutGrid, ShoppingBag, BarChart3, Megaphone, Wrench, Users2, ClipboardList, Share2, PackageX, Puzzle, Ticket, QrCode, FileText, Component, KeyRound } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useEffect, useState } from 'react';
+import { ThemeToggle } from './theme-toggle';
 
 const coreMenuItems = [
     { href: `/app/{appId}`, label: 'Overview', icon: LayoutDashboard },
@@ -96,6 +97,9 @@ export function AppSidebar() {
                 {renderMenuItems(managementMenuItems)}
             </SidebarMenu>
         </SidebarContent>
+        <div className="p-2 mt-auto">
+            <ThemeToggle />
+        </div>
     </Sidebar>
   )
 }

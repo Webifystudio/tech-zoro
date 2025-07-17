@@ -193,11 +193,19 @@ export default function StorefrontPage() {
             </Button>
           </div>
           {products.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {products.slice(0, 8).map(product => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
+            <Carousel opts={{align: "start"}} className="w-full">
+                <CarouselContent>
+                    {products.slice(0,8).map(product => (
+                       <CarouselItem key={product.id} className="basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                            <div className="p-1 h-full">
+                                <ProductCard product={product} />
+                            </div>
+                       </CarouselItem>
+                    ))}
+                </CarouselContent>
+                <CarouselPrevious className="hidden md:flex" />
+                <CarouselNext className="hidden md:flex" />
+            </Carousel>
           ) : (
             <p className="text-muted-foreground text-center py-8">No new products yet.</p>
           )}
@@ -214,11 +222,19 @@ export default function StorefrontPage() {
                             <Link href={`/store/${appId}/category/${category.id}`}>View All <ArrowRight className="ml-2 h-4 w-4" /></Link>
                         </Button>
                     </div>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        {categoryProducts.slice(0, 4).map(product => (
-                          <ProductCard key={product.id} product={product} />
-                        ))}
-                     </div>
+                     <Carousel opts={{align: "start"}} className="w-full">
+                        <CarouselContent>
+                            {categoryProducts.slice(0, 8).map(product => (
+                               <CarouselItem key={product.id} className="basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                                    <div className="p-1 h-full">
+                                        <ProductCard product={product} />
+                                    </div>
+                               </CarouselItem>
+                            ))}
+                        </CarouselContent>
+                        <CarouselPrevious className="hidden md:flex" />
+                        <CarouselNext className="hidden md:flex"/>
+                    </Carousel>
                 </section>
             );
         })}
