@@ -113,13 +113,8 @@ export default function StorefrontPage() {
           </div>
           <div className="p-4 flex-grow flex flex-col">
             <h3 className="font-semibold text-md truncate">{product.name}</h3>
-            <p className="text-muted-foreground text-sm mt-1 flex-grow truncate">{product.description}</p>
-            <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center justify-between mt-2">
               <p className="font-bold text-lg text-primary">₹{product.price.toFixed(2)}</p>
-              <Badge variant="outline" className="capitalize">
-                  {product.platform === 'whatsapp' ? <MessageCircle className="h-4 w-4 mr-1.5"/> : product.platform === 'instagram' ? <Instagram className="h-4 w-4 mr-1.5"/> : <LinkIcon className="h-4 w-4 mr-1.5"/>}
-                  {product.platform}
-              </Badge>
             </div>
           </div>
         </div>
@@ -196,7 +191,7 @@ export default function StorefrontPage() {
             <Carousel opts={{ align: "start" }} className="w-full">
               <CarouselContent className="-ml-4">
                 {products.slice(0, 8).map(product => (
-                  <CarouselItem key={product.id} className="pl-4 basis-1/2 lg:basis-1/4">
+                  <CarouselItem key={product.id} className="pl-4 basis-1/2 md:basis-1/3 lg:basis-1/4">
                     <ProductCard product={product} />
                   </CarouselItem>
                 ))}
@@ -223,7 +218,7 @@ export default function StorefrontPage() {
                      <Carousel opts={{ align: "start" }} className="w-full">
                         <CarouselContent className="-ml-4">
                         {categoryProducts.slice(0, 8).map(product => (
-                            <CarouselItem key={product.id} className="pl-4 basis-1/2 lg:basis-1/4">
+                            <CarouselItem key={product.id} className="pl-4 basis-1/2 md:basis-1/3 lg:basis-1/4">
                                 <ProductCard product={product} />
                             </CarouselItem>
                         ))}
