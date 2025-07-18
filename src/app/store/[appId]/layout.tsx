@@ -120,7 +120,9 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
         setAppData(data);
         const newTheme = data.customization?.theme || 'light';
         setTheme(newTheme);
-        document.documentElement.dataset.theme = newTheme;
+        if (typeof window !== 'undefined' && window.parent === window) {
+            document.documentElement.dataset.theme = newTheme;
+        }
       } else {
         setAppData(null);
       }
@@ -246,7 +248,7 @@ const StoreLayoutContent = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <div className={cn("min-h-screen flex flex-col", (theme === 'glass' || theme === 'gradient') ? '' : 'bg-muted/40')} data-theme={theme}>
+    <div className={cn("min-h-screen flex flex-col", (theme === 'glass' || theme === 'gradient') ? '' : 'bg-muted/40')}>
       {appData?.marketing?.isBannerActive && appData.marketing.bannerText && (
         <div className="bg-primary text-primary-foreground text-center py-2 px-4 text-sm font-semibold animate-slide-in-from-bottom">
           {appData.marketing.bannerText}
