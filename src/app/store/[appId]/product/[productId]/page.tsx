@@ -388,7 +388,7 @@ export default function ProductDetailPage() {
                         <p className="text-3xl font-bold text-primary">₹{finalPrice?.toFixed(2) || product.price.toFixed(2)}</p>
                     )}
                 </div>
-                <p className="text-muted-foreground leading-relaxed">{product.description}</p>
+                <p className="text-muted-foreground leading-relaxed whitespace-pre-line">{product.description}</p>
                 <Separator />
                  <div className="space-y-4">
                     <Label htmlFor="coupon">Have a coupon?</Label>
